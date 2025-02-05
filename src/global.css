@@ -1,0 +1,258 @@
+:root {
+  /* Colors */
+  --c-primary: #008939;
+  --c-primary-text: #ffffff;
+  --c-primary-active: #005437;
+  --c-secondary: #e6007d;
+  --c-secondary-text: #ffffff;
+  --c-secondary-active: #c4006c;
+  --c-accent: #cf0c0c;
+  --c-accent-text: #ffffff;
+  --c-accent-active: #b60909;
+  --c-base-100: #ffffff;
+  --c-base-200: #fafafa;
+  --c-base-300: #f4f4f4;
+  --c-base-400: #e9e9e9;
+  --c-base-500: #cccccc;
+  --c-base-590: #808080;
+  --c-base-600: #1f1f1f;
+
+  /* Font Families */
+  --ff-sans: Arial, sans-serif;
+  --ff-mono: 'Courier New', Courier, monospace;
+
+  /* Font Sizes */
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5rem;
+
+  --border-radius: 6px;
+}
+
+html {
+  margin: 0;
+  color: var(--c-base-600);
+  font-family: var(--ff-sans);
+  font-size: var(--fs-md);
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--c-primary);
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: normal;
+}
+
+h2 {
+  font-size: 1.15em;
+}
+
+h3 {
+  font-size: 1em;
+  font-weight: bold;
+}
+
+button {
+  --c-btn: var(--c-base-200);
+  --c-btn-text: var(--c-base-600);
+  --c-btn-active: var(--c-base-300);
+  font: inherit;
+  border: 0;
+  outline: 0;
+  padding: 0.5em 1em;
+  background-color: var(--c-btn);
+  color: var(--c-btn-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5em;
+  gap: 1em;
+  pointer-events: all;
+}
+
+button:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+button:hover {
+  background-color: var(--c-btn-active);
+}
+
+button:active {
+  color: var(--c-btn);
+  background-color: var(--c-btn-text);
+}
+
+button.button-primary {
+  --c-btn: var(--c-primary);
+  --c-btn-text: var(--c-primary-text);
+  --c-btn-active: var(--c-primary-active);
+}
+
+button.button-secondary {
+  --c-btn: var(--c-secondary);
+  --c-btn-text: var(--c-secondary-text);
+  --c-btn-active: var(--c-secondary-active);
+}
+
+button.button-accent {
+  --c-btn: var(--c-accent);
+  --c-btn-text: var(--c-accent-text);
+  --c-btn-active: var(--c-accent-active);
+}
+
+button.button-round {
+  border-radius: 999px;
+  aspect-ratio: 1;
+  padding: 0.5em;
+  font-size: 1.1em;
+}
+
+button.button-icon {
+  border-radius: 999px;
+  aspect-ratio: 1;
+  padding: 0.2em;
+}
+
+button.button-overlay {
+  position: absolute;
+  box-shadow: 1px 1px 5px #00000066;
+}
+
+/* Label */
+
+label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+/* Text Input */
+
+input[type='text'],
+input[type='password'],
+input[type='email'] {
+  border: none;
+  outline: none;
+  flex: 1;
+  padding: 0.5rem;
+  background-color: var(--c-base-200);
+  border-radius: 0.5rem;
+  font: inherit;
+
+  &:disabled {
+    background-color: inherit;
+    color: inherit;
+  }
+}
+
+/* Radio Button */
+
+div.radio-input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  justify-content: stretch;
+}
+
+div.radio-input {
+  display: flex;
+  flex-direction: row;
+}
+
+input[type='radio'] {
+  display: none;
+}
+
+label:has(input[type='radio']) {
+  background-color: var(--c-base-200);
+  padding: 0.5em 1em;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+}
+
+label:has(input[type='radio']:disabled) {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+label:has(input[type='radio']):hover {
+  background-color: var(--c-base-300);
+}
+
+label:has(input[type='radio']:checked) {
+  background-color: var(--c-secondary);
+  color: var(--c-secondary-text);
+}
+
+label:has(input[type='radio']:checked):hover {
+  background-color: var(--c-secondary-active);
+}
+
+label:has(input[type='radio']):first-child {
+  border-radius: 0.5em 0 0 0.5rem;
+}
+
+label:has(input[type='radio']):last-child {
+  border-radius: 0 0.5em 0.5rem 0;
+}
+
+/* Textarea */
+
+textarea {
+  background-color: var(--c-base-200);
+  border: none;
+  flex: 1;
+  border-radius: 0.5em;
+  outline: none;
+  padding: 0.5rem;
+  font: inherit;
+  min-height: 4rem;
+  resize: none;
+}
+
+textarea:disabled {
+  background-color: transparent;
+}
+
+/* Placeholder */
+
+textarea::placeholder,
+input::placeholder {
+  color: var(--c-base-500);
+}
+
+/* Tags */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  background-color: var(--c-base-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  gap: 0.25rem;
+  font-size: 0.9em;
+}
