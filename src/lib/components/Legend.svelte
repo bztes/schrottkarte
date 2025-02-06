@@ -3,15 +3,15 @@
 
 <ul>
   <li>
-    Markierung Neu
+    Markierung neu
     <span class="marker"></span>
   </li>
   <li>
-    Markierung Entfernt
+    Markierung erledigt
     <span class="marker marker-removed"></span>
   </li>
   <li>
-    Markierung Abgelehnt
+    Markierung abgelehnt
     <span class="marker marker-damaged"></span>
   </li>
   <li>
