@@ -39,6 +39,9 @@
     <div class="main">
       <Legend></Legend>
     </div>
+    <div>
+      <a href="/export/markers">Export Markers to CSV</a>
+    </div>
     <div class="footer">
       <form method="POST" use:enhance>
         <button class="button-secondary" formaction="/?/signout">Abmelden</button>
