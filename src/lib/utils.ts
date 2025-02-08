@@ -51,11 +51,10 @@ export function canUpdateLocation(date: Date) {
   return minutesSince(date) <= 30;
 }
 
-export async function getNameFromLatLng(pos: LngLat) {
+export async function reverseGeocoding(pos: LngLat) {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`;
   const response = await fetch(url);
-  const data = await response.json();
-  return data.display_name;
+  return response.json();
 }
 
 export function stringifyLngLat(lngLat: LngLat) {

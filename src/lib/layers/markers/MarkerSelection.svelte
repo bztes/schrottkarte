@@ -10,7 +10,7 @@
 
 <script lang="ts">
   import Details from '$lib/components/Details.svelte';
-  import { canUpdateLocation, debounce, getNameFromLatLng, noop, watch } from '$lib/utils';
+  import { canUpdateLocation, debounce, reverseGeocoding, noop, watch } from '$lib/utils';
   import type { Map } from 'maplibre-gl';
   import { untrack } from 'svelte';
   import IcRoundLocationSearching from '~icons/ic/round-location-searching';
@@ -62,6 +62,7 @@
   // default marker name by center position
 
   let generatedMarkerName = $state<string>();
+  let generatedMarkerHouseNumber = $state('');
 
   $effect(() => {
     if (mode === 'create') {
@@ -76,7 +77,9 @@
   });
 
   const updateDefaultMarkerName = debounce(async () => {
-    generatedMarkerName = await getNameFromLatLng(map.getCenter());
+    const markerInfo = await reverseGeocoding(map.getCenter());
+    generatedMarkerName = markerInfo.display_name;
+    generatedMarkerHouseNumber = markerInfo.address?.house_number;
   }, 1000);
 
   async function handleMoveEnd() {
@@ -181,6 +184,9 @@
         {/if}
       {:else if mode === 'create'}
         <button class="button-primary" onclick={handleSaveCreateClick}>Hinzufügen</button>
+        {#if !generatedMarkerHouseNumber}
+          <span class="warn">Keine Hausnummer ermittelt</span>
+        {/if}
       {:else if mode === 'edit'}
         <button class="button-primary" onclick={handleSaveEditClick} disabled={!hasChanged}>
           Speichern
@@ -259,5 +265,9 @@
     flex-direction: column;
     gap: 0.5rem;
     font-size: 1rem;
+  }
+
+  .warn {
+    color: red;
   }
 </style>
