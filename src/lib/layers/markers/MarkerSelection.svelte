@@ -21,9 +21,11 @@
     marker: Marker;
     onClose?: () => void;
     onSave?: () => void;
+    onDelete?: () => void;
     hasChanged?: boolean;
     mode?: MarkerSelectionMode;
     canUpdate?: boolean;
+    canDelete?: boolean;
   }
 
   let {
@@ -31,9 +33,11 @@
     marker = $bindable(),
     onClose = noop,
     onSave = noop,
+    onDelete = noop,
     hasChanged = $bindable(false),
     mode = $bindable('view'),
     canUpdate = false,
+    canDelete = false,
   }: Props = $props();
 
   // Track marker has changed
@@ -144,6 +148,11 @@
     mode = 'view';
   }
 
+  function handleDeleteClick() {
+    onDelete();
+    mode = 'view';
+  }
+
   // ui component settings
 
   let title = $derived(mode === 'create' ? 'Neue Markierung' : marker.name || 'Unbenannt');
@@ -180,6 +189,9 @@
           <button class="button-primary" onclick={handleEditClick}>Bearbeiten</button>
           {#if canUpdateLocation(marker.created_at)}
             <button class="button-primary" onclick={handleMoveClick}>Verschieben</button>
+          {/if}
+          {#if canDelete}
+            <button class="button-accent" onclick={handleDeleteClick}>Löschen</button>
           {/if}
         {/if}
       {:else if mode === 'create'}

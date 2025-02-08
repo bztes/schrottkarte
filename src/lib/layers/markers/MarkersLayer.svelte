@@ -27,12 +27,20 @@
     markersService: MarkersService;
     dialogsService: DialogsService;
     canUpdate?: boolean;
+    canDelete?: boolean;
     canInsert?: boolean;
   }
 
   const map = getMabLibre();
 
-  let { markersService, dialogsService, canUpdate = false, canInsert = false }: Props = $props();
+  let {
+    markersService,
+    dialogsService,
+    canUpdate = false,
+    canDelete = false,
+    canInsert = false,
+  }: Props = $props();
+
   let selectedMarker = $state<Marker>();
   let selectedMarkerMode: MarkerSelectionMode = $state('view');
   let selectedMarkerHasChanged = $state(false);
@@ -200,9 +208,16 @@
     });
   });
 
-  async function handleMarkerDetailsSave() {
+  function handleMarkerDetailsSave() {
     if (selectedMarker) {
       markersService.saveDraft(selectedMarker);
+      selectMarker(undefined);
+    }
+  }
+
+  function handleMarkerDelete() {
+    if (selectedMarker) {
+      markersService.remove(selectedMarker);
       selectMarker(undefined);
     }
   }
@@ -255,7 +270,9 @@
     bind:mode={selectedMarkerMode}
     {map}
     {canUpdate}
+    {canDelete}
     onSave={handleMarkerDetailsSave}
+    onDelete={handleMarkerDelete}
     onClose={handleMarkerDetailsClose}
   />
 {/if}

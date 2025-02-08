@@ -226,6 +226,15 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
     unsyncedMarkersMap.set(marker.id, marker);
   }
 
+  async function remove(marker: Marker) {
+    const { error } = await supabase.from('markers').delete().eq('id', marker.id);
+    if (error) {
+      return;
+    }
+
+    markersMap.delete(marker.id);
+  }
+
   function isUnsynced(markerId: string) {
     return unsyncedMarkersMap.has(markerId);
   }
@@ -237,6 +246,7 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
   return {
     draft,
     saveDraft,
+    remove,
     isUnsynced,
     loadAll,
     loadView: debounce(loadView, 1000),
