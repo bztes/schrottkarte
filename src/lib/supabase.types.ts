@@ -199,7 +199,7 @@ export type Database = {
     }
     Enums: {
       app_role: "editor" | "viewer" | "street" | "spotter"
-      marker_state_enum: "new" | "done" | "rejected"
+      marker_state_enum: "new" | "marked" | "done"
     }
     CompositeTypes: {
       [_ in never]: never

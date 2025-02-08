@@ -18,9 +18,9 @@
   } satisfies DialogParams;
 
   const stateColors: Record<MarkerState, string> = {
-    new: '#008939',
-    rejected: 'red',
-    done: '#55555555',
+    new: 'red',
+    marked: 'yellow',
+    done: 'green',
   };
 
   interface Props {

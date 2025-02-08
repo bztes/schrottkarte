@@ -62,7 +62,7 @@ create policy "insert user_roles" on public.user_roles as permissive for insert 
 
 -- markers
 
-create type marker_state_enum as enum ('new', 'done', 'rejected');
+create type marker_state_enum as enum ('new', 'marked', 'done');
 
 create table markers (
   id uuid primary key,

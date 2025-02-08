@@ -3,23 +3,23 @@
 
 <ul>
   <li>
-    Markierung neu
+    Neu
     <span class="marker"></span>
   </li>
   <li>
-    Markierung erledigt
-    <span class="marker marker-removed"></span>
+    Markiert
+    <span class="marker marker-marked"></span>
   </li>
   <li>
-    Markierung abgelehnt
-    <span class="marker marker-damaged"></span>
+    Erledigt
+    <span class="marker marker-done"></span>
   </li>
   <li>
     Markierung nicht gespeichert
     <div class="multiple">
       <span class="marker marker-unsaved"></span>
-      <span class="marker marker-removed marker-unsaved"></span>
-      <span class="marker marker-damaged marker-unsaved"></span>
+      <span class="marker marker-marked marker-unsaved"></span>
+      <span class="marker marker-done marker-unsaved"></span>
     </div>
   </li>
   <li>
@@ -75,16 +75,16 @@
     display: block;
     width: 1rem;
     height: 1rem;
-    background-color: #008939;
+    background-color: red;
     border-radius: 999px;
   }
 
-  .marker-removed {
-    background-color: #55555555;
+  .marker-marked {
+    background-color: yellow;
   }
 
-  .marker-damaged {
-    background-color: red;
+  .marker-done {
+    background-color: green;
   }
 
   .marker-unsaved {

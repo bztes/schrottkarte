@@ -19,7 +19,7 @@ export interface Marker {
 }
 export type MarkerState = Database['public']['Enums']['marker_state_enum'];
 
-export const markerStates: MarkerState[] = ['new', 'done', 'rejected'] as const;
+export const markerStates: MarkerState[] = ['new', 'marked', 'done'] as const;
 
 export type MarkersService = ReturnType<typeof createMarkersService>;
 

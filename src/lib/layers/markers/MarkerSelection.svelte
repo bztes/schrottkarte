@@ -1,8 +1,8 @@
 <script lang="ts" module>
   const stateNames: Record<MarkerState, string> = {
     new: 'Neu',
+    marked: 'Markiert',
     done: 'Erledigt',
-    rejected: 'Abgelehnt',
   };
 
   export type MarkerSelectionMode = 'view' | 'edit' | 'move' | 'create';
