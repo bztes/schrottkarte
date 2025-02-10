@@ -94,7 +94,7 @@ begin
     if current_user in ('authenticated', 'anon') then
       new.id := old.id;
       new.created_at := old.created_at;
-      if old.created_at < now() - interval '1 hour' then
+      if not public.has_role(array['editor']) and old.created_at < now() - interval '1 hour' then
         new.location := old.location;
       end if;
     end if;

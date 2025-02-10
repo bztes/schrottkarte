@@ -7,6 +7,7 @@
   import { getLayersService, getMabLibre } from '$lib/components/MapView.svelte';
   import { point } from '@turf/turf';
   import type { Feature, Point } from 'geojson';
+  import { canUpdateLocation } from '$lib/utils';
 
   const confirmDialogParams = {
     title: 'Ungespeicherte Änderungen',
@@ -29,6 +30,7 @@
     canUpdate?: boolean;
     canDelete?: boolean;
     canInsert?: boolean;
+    canMove?: boolean;
   }
 
   const map = getMabLibre();
@@ -39,6 +41,7 @@
     canUpdate = false,
     canDelete = false,
     canInsert = false,
+    canMove = false,
   }: Props = $props();
 
   let selectedMarker = $state<Marker>();
@@ -271,6 +274,7 @@
     {map}
     {canUpdate}
     {canDelete}
+    canMove={canMove || canUpdateLocation(selectedMarker.created_at)}
     onSave={handleMarkerDetailsSave}
     onDelete={handleMarkerDelete}
     onClose={handleMarkerDetailsClose}

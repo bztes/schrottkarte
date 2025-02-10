@@ -10,7 +10,7 @@
 
 <script lang="ts">
   import Details from '$lib/components/Details.svelte';
-  import { canUpdateLocation, debounce, reverseGeocoding, noop, watch } from '$lib/utils';
+  import { debounce, reverseGeocoding, noop, watch } from '$lib/utils';
   import type { Map } from 'maplibre-gl';
   import { untrack } from 'svelte';
   import IcRoundLocationSearching from '~icons/ic/round-location-searching';
@@ -26,6 +26,7 @@
     mode?: MarkerSelectionMode;
     canUpdate?: boolean;
     canDelete?: boolean;
+    canMove?: boolean;
   }
 
   let {
@@ -38,6 +39,7 @@
     mode = $bindable('view'),
     canUpdate = false,
     canDelete = false,
+    canMove = false,
   }: Props = $props();
 
   // Track marker has changed
@@ -187,7 +189,7 @@
       {#if mode === 'view'}
         {#if canUpdate}
           <button class="button-primary" onclick={handleEditClick}>Bearbeiten</button>
-          {#if canUpdateLocation(marker.created_at)}
+          {#if canMove}
             <button class="button-primary" onclick={handleMoveClick}>Verschieben</button>
           {/if}
           {#if canDelete}

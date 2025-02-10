@@ -31,7 +31,13 @@
     <OsmLayer />
     <StreetLightsLayer />
     <DrawingsEditorLayer {drawingsService} {tagsService} />
-    <MarkersLayer {markersService} {dialogsService} canDelete={true} canUpdate={true} />
+    <MarkersLayer
+      {markersService}
+      {dialogsService}
+      canDelete={true}
+      canUpdate={true}
+      canMove={true}
+    />
   </MapView>
 </div>
 

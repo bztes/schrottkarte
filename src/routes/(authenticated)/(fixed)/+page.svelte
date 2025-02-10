@@ -30,5 +30,6 @@
       pageData.user?.userRole === 'spotter'}
     canDelete={pageData.user?.userRole === 'editor'}
     canInsert={pageData.user?.userRole === 'editor' || pageData.user?.userRole === 'street'}
+    canMove={pageData.user?.userRole === 'editor'}
   />
 </MapView>
