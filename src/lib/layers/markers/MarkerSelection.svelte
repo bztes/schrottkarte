@@ -224,7 +224,7 @@
       </label>
       <label>
         Kommentar
-        <textarea bind:value={marker.description} placeholder="ohne Räder"></textarea>
+        <textarea bind:value={marker.description}></textarea>
       </label>
     {:else}
       <label>
@@ -244,7 +244,7 @@
       </div>
       <label>
         Kommentar
-        <textarea bind:value={marker.description} placeholder="ohne Räder"></textarea>
+        <textarea bind:value={marker.description}></textarea>
       </label>
     {/if}
   </Details>
