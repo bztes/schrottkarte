@@ -11,8 +11,6 @@
   import {
     AttributionControl,
     GeolocateControl,
-    LngLat,
-    LngLatBounds,
     Map as MapLibre,
     NavigationControl,
     type LngLatLike,
@@ -26,9 +24,10 @@
     zoom?: number;
     children: Snippet;
     onloaded?: (map: MapLibre) => void;
+    onmoveend?: (map: MapLibre) => void;
   }
 
-  let { layersService, center, zoom, children, onloaded }: Props = $props();
+  let { layersService, center, zoom, children, onloaded, onmoveend }: Props = $props();
   let mapContainer = $state<HTMLElement>();
   let map = $state<MapLibre>();
   setLayersService(layersService);
@@ -41,14 +40,6 @@
       return;
     }
 
-    const bounds =
-      center || zoom
-        ? undefined
-        : new LngLatBounds(
-            new LngLat(13.308447932983597, 52.36749637746331),
-            new LngLat(13.439288815794157, 52.51437170724549),
-          );
-
     map = new MapLibre({
       container: mapContainer,
       style: {
@@ -56,9 +47,8 @@
         sources: {},
         layers: [],
       },
-      center: center ?? [13.3656, 52.4626],
+      center: center ?? [13.37721, 52.516246],
       zoom: zoom ?? 14,
-      bounds,
       attributionControl: false,
     });
 
@@ -85,6 +75,13 @@
       initialized = true;
       if (map && onloaded) {
         onloaded(map);
+      }
+    });
+
+    map.on('moveend', () => {
+      initialized = true;
+      if (map && onmoveend) {
+        onmoveend(map);
       }
     });
 
