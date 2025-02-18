@@ -206,6 +206,9 @@
           Speichern
         </button>
         <button class="button-accent" onclick={handleCancelEditClick}>Abbrechen</button>
+        {#if canDelete}
+          <button class="button-accent" onclick={handleDeleteClick}>Löschen</button>
+        {/if}
       {/if}
     {/snippet}
 
