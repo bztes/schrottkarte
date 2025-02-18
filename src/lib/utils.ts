@@ -52,7 +52,7 @@ export function canUpdateLocation(date: Date) {
 }
 
 export async function reverseGeocoding(pos: LngLat) {
-  const url = `https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`;
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&zoom=18&layer=address&format=json`;
   const response = await fetch(url);
   return response.json();
 }
