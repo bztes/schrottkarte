@@ -164,7 +164,7 @@
       case 'edit':
         return 'Markierung bearbeiten';
       case 'view':
-        return `Markierung - ${stateNames[marker.state]}`;
+        return marker.description;
       case 'create':
         return generatedMarkerName ?? 'Adresse wird geladen...';
       default:
