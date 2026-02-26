@@ -8,7 +8,7 @@
   function activate() {
     map.addSource('street-lights', {
       type: 'vector',
-      url: 'https://tiles.nc.bztes.dev/data/beleuchtung-berlin.json',
+      url: 'https://tiles.app.bztes.dev/data/beleuchtung-berlin.json',
       attribution:
         '&copy; <a href="https://www.berlin.de/sen/sbw/stadtdaten/geoportal/">Geoportal Berlin / Öffentliche Beleuchtung</a> <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>',
     });
