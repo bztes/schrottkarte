@@ -14,7 +14,7 @@
     });
 
     map.addLayer({
-      id: 'street-lights',
+      id: 'street-lights-marker',
       type: 'circle',
       source: 'street-lights',
       'source-layer': 'beleuchtung',
@@ -24,10 +24,30 @@
         'circle-opacity': 0.5,
       },
     });
+
+    map.addLayer({
+      id: 'street-lights-label',
+      type: 'symbol',
+      source: 'street-lights',
+      'source-layer': 'beleuchtung',
+      minzoom: 17,
+      layout: {
+        'text-field': ['get', 'kurznummer'],
+        'text-size': 12,
+        'text-offset': [0, 0.5],
+        'text-anchor': 'top',
+        'text-allow-overlap': false,
+        'text-font': ['Open Sans Regular'],
+      },
+      paint: {
+        'text-color': '#000000',
+      },
+    });
   }
 
   function deactivate() {
-    map.removeLayer('street-lights');
+    map.removeLayer('street-lights-label');
+    map.removeLayer('street-lights-marker');
     map.removeSource('street-lights');
   }
 </script>

@@ -44,6 +44,7 @@
       container: mapContainer,
       style: {
         version: 8,
+        glyphs: 'https://tiles.app.bztes.dev/fonts/{fontstack}/{range}.pbf',
         sources: {},
         layers: [],
       },
