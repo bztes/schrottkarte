@@ -107,7 +107,7 @@ export function createDrawingsService(supabase: SupabaseClient<Database>, alerts
   function draft(id: string): Drawing {
     const draft = drawingsMap[id];
     if (draft) {
-      return $state.snapshot(draft) as Drawing;
+      return $state.snapshot(draft as unknown) as Drawing;
     }
 
     const dateNow = new Date();
