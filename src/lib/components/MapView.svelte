@@ -75,7 +75,7 @@
     geoControl.on('error', () => (locating = false));
     map.addControl(geoControl, 'top-left');
 
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
 
     map.on('load', () => {
       initialized = true;

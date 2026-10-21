@@ -42,9 +42,9 @@ export const markerPermissions = {
  */
 export const adminRoutes = [
   { href: '/admin', role: 'editor' },
-  { href: '/admin/export', role: 'editor' },
-  { href: '/admin/layers', role: 'admin' },
   { href: '/admin/users', role: 'admin' },
+  { href: '/admin/layers', role: 'admin' },
+  { href: '/admin/export', role: 'editor' },
   { href: '/admin/migrate', role: 'admin' },
 ] as const satisfies { href: string; role: UserRole }[];
 

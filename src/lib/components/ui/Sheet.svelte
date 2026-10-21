@@ -31,8 +31,8 @@
   const mobile = new MediaQuery('max-width: 720px');
   let width = $state(0);
   let height = $state(0);
-  // gap between the sheet and the map edge on desktop
-  const gap = 12;
+  // gap between the sheet and the map edge on desktop, matches the 1.5rem offset below
+  const gap = 24;
 
   const inset = $derived<SheetInset>(
     mobile.current ? { left: 0, bottom: height } : { left: width + gap, bottom: 0 },
@@ -79,8 +79,8 @@
   .sheet {
     position: absolute;
     z-index: 100;
-    left: 0.75rem;
-    bottom: 0.75rem;
+    left: 1.5rem;
+    bottom: 1.5rem;
     width: 24rem;
     max-height: calc(100% - 9rem);
     box-sizing: border-box;

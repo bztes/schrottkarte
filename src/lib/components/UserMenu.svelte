@@ -97,8 +97,8 @@
 
   .user-menu.map {
     position: fixed;
-    top: 0.75rem;
-    right: 0.75rem;
+    top: 1.5rem;
+    right: 1.5rem;
   }
 
   .user-menu.admin {
@@ -119,7 +119,7 @@
     border-radius: 999px;
     background-color: var(--c-base-100);
     box-shadow: var(--shadow-md);
-    font-size: 1.9rem;
+    font-size: 2.3rem;
     cursor: pointer;
   }
 

@@ -281,14 +281,14 @@
   .create {
     position: absolute;
     z-index: 3;
-    right: 1rem;
-    /* above the attribution control */
-    bottom: 2.75rem;
+    display: flex;
+    right: 2.25rem;
+    bottom: 2.25rem;
   }
 
   @media (max-width: 720px) {
     .create {
-      bottom: calc(2.75rem + env(safe-area-inset-bottom));
+      bottom: calc(2.25rem + env(safe-area-inset-bottom));
     }
   }
 </style>

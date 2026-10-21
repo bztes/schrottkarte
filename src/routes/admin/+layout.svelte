@@ -14,9 +14,9 @@
 
   const tabInfo = {
     '/admin': { label: 'Editor', icon: LucidePenTool },
-    '/admin/export': { label: 'Export', icon: LucideDownload },
-    '/admin/layers': { label: 'Map layers', icon: LucideLayers },
     '/admin/users': { label: 'Users', icon: LucideUsers },
+    '/admin/layers': { label: 'Map layers', icon: LucideLayers },
+    '/admin/export': { label: 'Export', icon: LucideDownload },
     '/admin/migrate': { label: 'Supabase import', icon: LucideCloudUpload },
   } satisfies Record<(typeof adminRoutes)[number]['href'], unknown>;
 
