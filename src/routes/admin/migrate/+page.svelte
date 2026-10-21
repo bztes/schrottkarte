@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { importSupabase } from '#lib/remote/admin.remote.js';
+  import { importSupabase } from '#lib/remote/supabase.remote.js';
   import Card from '#lib/components/ui/Card.svelte';
   import Field from '#lib/components/ui/Field.svelte';
   import Input from '#lib/components/ui/Input.svelte';
@@ -61,11 +61,6 @@
     </div>
     {#if result.skippedUsers.length > 0}
       <p class="muted">Skipped, already present: {result.skippedUsers.join(', ')}</p>
-    {/if}
-    {#if !result.signedIn}
-      <Callout tone="success">
-        <a href="/auth">Sign in now</a> with your Supabase email address and password.
-      </Callout>
     {/if}
   </Card>
 {/if}

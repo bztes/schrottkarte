@@ -4,11 +4,12 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/env';
 import { auth } from '#lib/server/auth.js';
 import { runMigrations } from '#lib/server/db/index.js';
-import { isSetupMode } from '#lib/server/guard.js';
+import { ensureDefaultUser } from '#lib/server/users.js';
 import { adminRoutes, hasRole, type UserRole } from '#lib/types.js';
 
-export const init: ServerInit = () => {
+export const init: ServerInit = async () => {
   runMigrations();
+  await ensureDefaultUser();
 };
 
 const betterAuth: Handle = async ({ event, resolve }) => {
@@ -45,11 +46,8 @@ const authGuard: Handle = async ({ event, resolve }) => {
 
   // see `adminRoutes`, unknown admin pages are for admins only
   if (url.pathname.startsWith('/admin')) {
-    const route = adminRoutes.find((r) => r.href === url.pathname) ?? {
-      role: 'admin',
-      setup: false,
-    };
-    if (user ? hasRole(user, route.role) : route.setup && isSetupMode()) {
+    const role = adminRoutes.find((r) => r.href === url.pathname)?.role ?? 'admin';
+    if (hasRole(user, role)) {
       return resolve(event);
     }
     if (hasRole(user, 'editor')) {
@@ -63,7 +61,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
   if (!user && url.pathname !== '/auth') {
     const fullPath = url.pathname + url.search;
     if (fullPath === '/' || fullPath === '') {
-      redirect(303, isSetupMode() ? '/admin/users' : '/auth');
+      redirect(303, '/auth');
     } else {
       const encodedRedirect = encodeURIComponent(fullPath);
       redirect(303, `/auth?redirect=${encodedRedirect}`);

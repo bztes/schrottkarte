@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createUser, deleteUser, getUsers, updateUserRole } from '#lib/remote/admin.remote.js';
+  import { createUser, deleteUser, getUsers, updateUserRole } from '#lib/remote/users.remote.js';
   import { userRoles, type UserRole } from '#lib/types.js';
   import { roles } from '#lib/user-roles.js';
   import { errorMessage } from '#lib/utils.js';
@@ -43,72 +43,65 @@
   }
 </script>
 
-{#if !data.setupMode}
-  <Card
-    title="Users"
-    description={users.current ? `${users.current.length} users` : 'Who has access to the map'}
-    flush
-  >
-    {#if users.error}
-      <div class="padded"><Callout tone="error">{errorMessage(users.error)}</Callout></div>
-    {:else if users.current}
-      <ul class="users">
-        {#each users.current as user (user.id)}
-          {@const isMe = user.id === data.user?.id}
-          <li>
-            <span class="avatar"><Identicon seed={user.email} /></span>
-            <div class="identity">
-              <span class="email">
-                {user.email}
-                {#if isMe}<Badge tone="primary">You</Badge>{/if}
-              </span>
-              <span class="name">{user.name}</span>
-            </div>
-            <div class="role">
-              <Select
-                value={user.role}
-                disabled={isMe}
-                aria-label="Role of {user.email}"
-                onchange={(e) => handleRoleChange(user.id, e.currentTarget.value as UserRole)}
-              >
-                {#each userRoles as role (role)}
-                  <option value={role}>{roles[role].label}</option>
-                {/each}
-              </Select>
-            </div>
-            <div class="actions">
-              <IconButton label="Set password" onclick={() => (passwordUser = user)}>
-                <LucideKeyRound />
-              </IconButton>
-              <IconButton
-                label="Delete"
-                variant="danger"
-                disabled={isMe}
-                onclick={() => handleDelete(user.id, user.email)}
-              >
-                <LucideTrash2 />
-              </IconButton>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="padded muted">Loading…</p>
-    {/if}
-  </Card>
-{/if}
+<Card
+  title="Users"
+  description={users.current ? `${users.current.length} users` : 'Who has access to the map'}
+  flush
+>
+  {#if users.error}
+    <div class="padded"><Callout tone="error">{errorMessage(users.error)}</Callout></div>
+  {:else if users.current}
+    <ul class="users">
+      {#each users.current as user (user.id)}
+        {@const isMe = user.id === data.user?.id}
+        <li>
+          <span class="avatar"><Identicon seed={user.email} /></span>
+          <div class="identity">
+            <span class="email">
+              {user.email}
+              {#if isMe}<Badge tone="primary">You</Badge>{/if}
+            </span>
+            <span class="name">{user.name}</span>
+          </div>
+          <div class="role">
+            <Select
+              value={user.role}
+              disabled={isMe}
+              aria-label="Role of {user.email}"
+              onchange={(e) => handleRoleChange(user.id, e.currentTarget.value as UserRole)}
+            >
+              {#each userRoles as role (role)}
+                <option value={role}>{roles[role].label}</option>
+              {/each}
+            </Select>
+          </div>
+          <div class="actions">
+            <IconButton label="Set password" onclick={() => (passwordUser = user)}>
+              <LucideKeyRound />
+            </IconButton>
+            <IconButton
+              label="Delete"
+              variant="danger"
+              disabled={isMe}
+              onclick={() => handleDelete(user.id, user.email)}
+            >
+              <LucideTrash2 />
+            </IconButton>
+          </div>
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p class="padded muted">Loading…</p>
+  {/if}
+</Card>
 
 {#if passwordUser}
   <SetPasswordDialog user={passwordUser} onclose={() => (passwordUser = undefined)} />
 {/if}
 
 <div class="columns">
-  <Card
-    title={data.setupMode ? 'Create the first user' : 'Create user'}
-    description={data.setupMode
-      ? 'The first user becomes an admin. Sign in with it afterwards.'
-      : 'New users sign in with their email address and password.'}
-  >
+  <Card title="Create user" description="New users sign in with their email address and password.">
     <form {...createUser}>
       <Field label="Email">
         <Input {...createUser.fields.email.as('email')} required trim />
@@ -119,17 +112,13 @@
       <Field label="Password">
         <Input {...createUser.fields._password.as('password')} required minlength={8} />
       </Field>
-      {#if data.setupMode}
-        <input {...createUser.fields.role.as('hidden', 'admin')} />
-      {:else}
-        <Field label="Role">
-          <Select {...createUser.fields.role.as('select')}>
-            {#each userRoles as role (role)}
-              <option value={role} selected={role === 'street'}>{roles[role].label}</option>
-            {/each}
-          </Select>
-        </Field>
-      {/if}
+      <Field label="Role">
+        <Select {...createUser.fields.role.as('select')}>
+          {#each userRoles as role (role)}
+            <option value={role} selected={role === 'street'}>{roles[role].label}</option>
+          {/each}
+        </Select>
+      </Field>
       {#each createUser.fields.allIssues() ?? [] as issue (issue.message)}
         <Callout tone="error">{issue.message}</Callout>
       {/each}

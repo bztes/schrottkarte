@@ -4,7 +4,6 @@
   import { adminRoutes, hasRole } from '#lib/types.js';
   import UserMenu from '#lib/components/UserMenu.svelte';
   import NavTab from '#lib/components/ui/NavTab.svelte';
-  import Callout from '#lib/components/ui/Callout.svelte';
   import LucidePenTool from '~icons/lucide/pen-tool';
   import LucideDownload from '~icons/lucide/download';
   import LucideUsers from '~icons/lucide/users';
@@ -21,10 +20,9 @@
     '/admin/migrate': { label: 'Supabase import', icon: LucideCloudUpload },
   } satisfies Record<(typeof adminRoutes)[number]['href'], unknown>;
 
-  // without users only the setup pages are available
   const tabs = $derived(
     adminRoutes
-      .filter((route) => (data.setupMode ? route.setup : hasRole(data.user, route.role)))
+      .filter((route) => hasRole(data.user, route.role))
       .map((route) => ({ href: route.href, ...tabInfo[route.href] })),
   );
 
@@ -48,15 +46,6 @@
 
     <UserMenu user={data.user} context="admin" />
   </header>
-
-  {#if data.setupMode}
-    <div class="notice">
-      <Callout>
-        There are no users yet. Create the first user or import an existing Supabase project. Until
-        then this page is accessible without signing in.
-      </Callout>
-    </div>
-  {/if}
 
   <main>
     {#if fill}
@@ -108,11 +97,6 @@
     flex: 1;
     min-width: 0;
     overflow-x: auto;
-  }
-
-  .notice {
-    margin: 1rem auto 0;
-    width: min(60rem, calc(100% - 2rem));
   }
 
   main {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setUserPassword } from '#lib/remote/admin.remote.js';
+  import { setUserPassword } from '#lib/remote/users.remote.js';
   import { errorMessage } from '#lib/utils.js';
   import Modal from '#lib/components/ui/Modal.svelte';
   import Field from '#lib/components/ui/Field.svelte';

@@ -1,5 +1,6 @@
+import { hashPassword } from 'better-auth/crypto';
 import type { UserRole } from '#lib/types.js';
-import type { Db, Tx } from './db/index.js';
+import { db, type Db, type Tx } from './db/index.js';
 import { account, user } from './db/schema.js';
 
 export interface NewUser {
@@ -59,4 +60,19 @@ export function insertCredentialAccount(
       updatedAt: createdAt,
     })
     .run();
+}
+
+/**
+ * Creates the default admin `admin@admin.local` with the password `admin` as long as no user exists.
+ */
+export async function ensureDefaultUser() {
+  if (db.select({ id: user.id }).from(user).limit(1).get()) {
+    return;
+  }
+  insertUser(
+    db,
+    { email: 'admin@admin.local', name: 'admin', role: 'admin' },
+    await hashPassword('admin'),
+  );
+  console.log('Created the default user admin@admin.local with the password "admin"');
 }

@@ -38,16 +38,15 @@ export const markerPermissions = {
 } as const satisfies Record<string, UserRole>;
 
 /**
- * The admin pages with the lowest role that may open them,
- * `setup` pages are also open without a session as long as no user exists.
+ * The admin pages with the lowest role that may open them.
  */
 export const adminRoutes = [
-  { href: '/admin', role: 'editor', setup: false },
-  { href: '/admin/export', role: 'editor', setup: false },
-  { href: '/admin/layers', role: 'admin', setup: false },
-  { href: '/admin/users', role: 'admin', setup: true },
-  { href: '/admin/migrate', role: 'admin', setup: true },
-] as const satisfies { href: string; role: UserRole; setup: boolean }[];
+  { href: '/admin', role: 'editor' },
+  { href: '/admin/export', role: 'editor' },
+  { href: '/admin/layers', role: 'admin' },
+  { href: '/admin/users', role: 'admin' },
+  { href: '/admin/migrate', role: 'admin' },
+] as const satisfies { href: string; role: UserRole }[];
 
 export const mapSourceTypes = ['raster', 'vector', 'raster-dem', 'geojson', 'image'] as const;
 

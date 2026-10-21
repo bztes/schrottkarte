@@ -1,21 +1,16 @@
-import { error, invalid, redirect } from '@sveltejs/kit';
-import { command, form, getRequestEvent, query } from '$app/server';
+import { error, invalid } from '@sveltejs/kit';
+import { command, form, query } from '$app/server';
 import { hashPassword } from 'better-auth/crypto';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '#lib/server/db/index.js';
 import { account, session, user } from '#lib/server/db/schema.js';
-import { isSetupMode, requireAdminOrSetup, requireUser } from '#lib/server/guard.js';
+import { requireUser } from '#lib/server/guard.js';
 import { insertCredentialAccount, insertUser } from '#lib/server/users.js';
-import { importFromSupabase } from '#lib/server/supabase-import.js';
 import { userRoles } from '#lib/types.js';
 
-export const getSetupMode = query(async () => {
-  return isSetupMode();
-});
-
 export const getUsers = query(async () => {
-  requireAdminOrSetup();
+  requireUser('admin');
   return db
     .select({
       id: user.id,
@@ -37,7 +32,7 @@ export const createUser = form(
     role: z.enum(userRoles),
   }),
   async ({ email, name, _password, role }) => {
-    const setupMode = requireAdminOrSetup();
+    requireUser('admin');
 
     const existing = db
       .select({ id: user.id })
@@ -50,18 +45,10 @@ export const createUser = form(
 
     insertUser(
       db,
-      {
-        email,
-        name: name || email.split('@')[0],
-        // the first user has to be able to manage the others
-        role: setupMode ? 'admin' : role,
-      },
+      { email, name: name || email.split('@')[0], role },
       await hashPassword(_password),
     );
 
-    if (setupMode) {
-      redirect(303, '/auth');
-    }
     void getUsers().refresh();
   },
 );
@@ -108,28 +95,3 @@ export const deleteUser = command(z.string(), async (id) => {
   db.delete(user).where(eq(user.id, id)).run();
   await getUsers().refresh();
 });
-
-export const importSupabase = form(
-  z.object({
-    _connectionString: z
-      .string()
-      .regex(/^postgres(ql)?:\/\//, 'Expected a connection string like postgresql://…'),
-    replace: z.boolean().optional(),
-  }),
-  async ({ _connectionString, replace }) => {
-    requireAdminOrSetup();
-    const { locals } = getRequestEvent();
-
-    try {
-      const result = await importFromSupabase({
-        connectionString: _connectionString,
-        replace: replace ?? false,
-      });
-      void getUsers().refresh();
-      return { ...result, signedIn: locals.user !== null };
-    } catch (e) {
-      console.error('Supabase import failed', e);
-      invalid(`Import failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  },
-);
