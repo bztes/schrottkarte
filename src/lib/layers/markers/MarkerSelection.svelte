@@ -14,7 +14,6 @@
   import StatTile from '#lib/components/ui/StatTile.svelte';
   import StatusDot from '#lib/components/ui/StatusDot.svelte';
   import Badge from '#lib/components/ui/Badge.svelte';
-  import Callout from '#lib/components/ui/Callout.svelte';
   import { stateColors, stateNames, stateOptions } from '#lib/marker-states.js';
   import { debounce, getFriendlyTime, reverseGeocoding, noop, watch } from '#lib/utils.js';
   import type { Map } from 'maplibre-gl';
@@ -26,7 +25,6 @@
   import LucideCheck from '~icons/lucide/check';
   import LucideChevronDown from '~icons/lucide/chevron-down';
   import LucideChevronUp from '~icons/lucide/chevron-up';
-  import LucideTriangleAlert from '~icons/lucide/triangle-alert';
   import type { Marker } from '../../markers.svelte';
 
   interface Props {
@@ -114,7 +112,6 @@
   // default marker name by center position
 
   let generatedMarkerName = $state<string>();
-  let generatedMarkerHouseNumber = $state('');
 
   $effect(() => {
     if (mode === 'create') {
@@ -131,7 +128,6 @@
   const updateDefaultMarkerName = debounce(async () => {
     const markerInfo = await reverseGeocoding(map.getCenter());
     generatedMarkerName = markerInfo.display_name;
-    generatedMarkerHouseNumber = markerInfo.address?.house_number;
   }, 1000);
 
   async function handleMoveEnd() {
@@ -252,9 +248,6 @@
     {/if}
   {:else if mode === 'create'}
     <p class="hint">Move the map until the pin points at the right spot.</p>
-    {#if generatedMarkerName !== undefined && !generatedMarkerHouseNumber}
-      <Callout tone="warning"><LucideTriangleAlert /> No house number found at this spot</Callout>
-    {/if}
     <Field label="Name" hint="(optional)">
       <Input bind:value={marker.name} placeholder={generatedMarkerName ?? 'Address'} />
     </Field>
