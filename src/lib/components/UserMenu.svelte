@@ -16,7 +16,7 @@
 
   interface Props {
     user: AppUser | null;
-    /** `map` floats over the map and links the legend, `admin` sits in the admin header */
+    /** `map` floats over the map, `admin` sits in the admin header */
     context?: 'map' | 'admin';
   }
 
@@ -66,17 +66,15 @@
         </header>
 
         <nav>
-          {#if context === 'map'}
-            <MenuItem
-              label="Legend"
-              onclick={() => {
-                open = false;
-                legendOpen = true;
-              }}
-            >
-              {#snippet icon()}<LucideInfo />{/snippet}
-            </MenuItem>
-          {/if}
+          <MenuItem
+            label="Legend"
+            onclick={() => {
+              open = false;
+              legendOpen = true;
+            }}
+          >
+            {#snippet icon()}<LucideInfo />{/snippet}
+          </MenuItem>
           {#if context === 'admin'}
             <MenuItem href="/" label="Back to map" onclick={() => (open = false)}>
               {#snippet icon()}<LucideMap />{/snippet}
