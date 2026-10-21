@@ -7,19 +7,22 @@
   import Badge from './ui/Badge.svelte';
   import IconButton from './ui/IconButton.svelte';
   import MenuItem from './ui/MenuItem.svelte';
+  import Modal from './ui/Modal.svelte';
   import LucideX from '~icons/lucide/x';
+  import LucideInfo from '~icons/lucide/info';
   import LucideLayoutDashboard from '~icons/lucide/layout-dashboard';
   import LucideLogOut from '~icons/lucide/log-out';
   import LucideMap from '~icons/lucide/map';
 
   interface Props {
     user: AppUser | null;
-    /** `map` floats over the map and shows the legend, `admin` sits in the admin header */
+    /** `map` floats over the map and links the legend, `admin` sits in the admin header */
     context?: 'map' | 'admin';
   }
 
   let { user, context = 'map' }: Props = $props();
   let open = $state(false);
+  let legendOpen = $state(false);
   let root = $state<HTMLElement>();
 
   function handleWindowClick(e: MouseEvent) {
@@ -62,14 +65,18 @@
           <IconButton label="Close" onclick={() => (open = false)}><LucideX /></IconButton>
         </header>
 
-        {#if context === 'map'}
-          <section>
-            <h3>Legend</h3>
-            <Legend />
-          </section>
-        {/if}
-
         <nav>
+          {#if context === 'map'}
+            <MenuItem
+              label="Legend"
+              onclick={() => {
+                open = false;
+                legendOpen = true;
+              }}
+            >
+              {#snippet icon()}<LucideInfo />{/snippet}
+            </MenuItem>
+          {/if}
           {#if context === 'admin'}
             <MenuItem href="/" label="Back to map" onclick={() => (open = false)}>
               {#snippet icon()}<LucideMap />{/snippet}
@@ -88,6 +95,12 @@
       </div>
     {/if}
   </div>
+
+  {#if legendOpen}
+    <Modal title="Legend" onclose={() => (legendOpen = false)}>
+      <Legend />
+    </Modal>
+  {/if}
 {/if}
 
 <style>
@@ -182,20 +195,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  section {
-    padding: 0.85rem;
-    border-bottom: 1px solid var(--c-border);
-  }
-
-  h3 {
-    margin-bottom: 0.6rem;
-    color: var(--c-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   nav {
