@@ -1,20 +1,33 @@
 <script lang="ts" module>
-  const stateNames: Record<MarkerState, string> = {
-    new: 'Neu',
-    marked: 'Markiert',
-    done: 'Erledigt',
-  };
-
   export type MarkerSelectionMode = 'view' | 'edit' | 'move' | 'create';
 </script>
 
 <script lang="ts">
-  import Details from '$lib/components/Details.svelte';
-  import { debounce, reverseGeocoding, noop, watch } from '$lib/utils';
+  import Sheet, { type SheetInset } from '#lib/components/ui/Sheet.svelte';
+  import CenterPin from '#lib/components/ui/CenterPin.svelte';
+  import Button from '#lib/components/ui/Button.svelte';
+  import IconButton from '#lib/components/ui/IconButton.svelte';
+  import Field from '#lib/components/ui/Field.svelte';
+  import Input from '#lib/components/ui/Input.svelte';
+  import Textarea from '#lib/components/ui/Textarea.svelte';
+  import SegmentedControl from '#lib/components/ui/SegmentedControl.svelte';
+  import StatTile from '#lib/components/ui/StatTile.svelte';
+  import StatusDot from '#lib/components/ui/StatusDot.svelte';
+  import Badge from '#lib/components/ui/Badge.svelte';
+  import Callout from '#lib/components/ui/Callout.svelte';
+  import { stateColors, stateNames, stateOptions } from '#lib/marker-states.js';
+  import { debounce, getFriendlyTime, reverseGeocoding, noop, watch } from '#lib/utils.js';
   import type { Map } from 'maplibre-gl';
-  import { untrack } from 'svelte';
-  import IcRoundLocationSearching from '~icons/ic/round-location-searching';
-  import { markerStates, type Marker, type MarkerState } from '../../markers.svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import LucideMapPinPlus from '~icons/lucide/map-pin-plus';
+  import LucidePencil from '~icons/lucide/pencil';
+  import LucideMove from '~icons/lucide/move';
+  import LucideTrash2 from '~icons/lucide/trash-2';
+  import LucideCheck from '~icons/lucide/check';
+  import LucideChevronDown from '~icons/lucide/chevron-down';
+  import LucideChevronUp from '~icons/lucide/chevron-up';
+  import LucideTriangleAlert from '~icons/lucide/triangle-alert';
+  import type { Marker } from '../../markers.svelte';
 
   interface Props {
     map: Map;
@@ -65,6 +78,39 @@
     hasChanged = false;
   }
 
+  // keep the marker visible next to the sheet by padding the map
+
+  function handleInset(inset: SheetInset) {
+    // while creating, the user positions the map, so only the padding changes
+    const center = mode === 'create' ? undefined : { lng: marker.lng, lat: marker.lat };
+    map.easeTo({ padding: { top: 0, right: 0, ...inset }, center, duration: 200 });
+  }
+
+  onDestroy(() => {
+    map.easeTo({ padding: { top: 0, right: 0, bottom: 0, left: 0 }, duration: 200 });
+  });
+
+  // the pin follows the padding the map really uses, an interrupted easeTo (pan, drag)
+  // can leave it anywhere between the old and the new inset
+  // svelte-ignore state_referenced_locally
+  let mapPadding = $state(map.getPadding());
+
+  $effect(() => {
+    // the pin is only shown while creating or moving
+    if (mode !== 'create' && mode !== 'move') {
+      return;
+    }
+    const update = () => {
+      const padding = map.getPadding();
+      if (padding.left !== mapPadding.left || padding.bottom !== mapPadding.bottom) {
+        mapPadding = padding;
+      }
+    };
+    untrack(update);
+    map.on('move', update);
+    return () => map.off('move', update);
+  });
+
   // default marker name by center position
 
   let generatedMarkerName = $state<string>();
@@ -103,18 +149,12 @@
   }
 
   function handleEditClick() {
-    map.panTo(marker);
     mode = 'edit';
-    expanded = true;
   }
 
   function handleMoveClick() {
     map.panTo(marker);
     mode = 'move';
-  }
-
-  function handleCloseClick() {
-    onClose();
   }
 
   function handleSaveMoveClick() {
@@ -128,7 +168,6 @@
     updateOrgMarker();
     onSave();
     mode = 'view';
-    expanded = false;
   }
 
   function handleSaveCreateClick() {
@@ -139,152 +178,182 @@
     mode = 'view';
   }
 
-  function handleCancelEditClick() {
-    Object.assign(marker, orgMarker);
-    mode = 'view';
-    expanded = false;
-  }
-
-  function handleCancelMoveClick() {
+  function handleCancelClick() {
     Object.assign(marker, orgMarker);
     mode = 'view';
   }
 
   function handleDeleteClick() {
     onDelete();
-    mode = 'view';
   }
 
   // ui component settings
 
-  let title = $derived(mode === 'create' ? 'Neue Markierung' : marker.name || 'Unbenannt');
+  let showFacts = $state(false);
+
+  let title = $derived(mode === 'create' ? 'New marker' : marker.name || 'Untitled');
 
   let subtitle = $derived.by(() => {
     switch (mode) {
-      case 'edit':
-        return 'Markierung bearbeiten';
-      case 'view':
-        return marker.description;
       case 'create':
-        return generatedMarkerName ?? 'Adresse wird geladen...';
+        return generatedMarkerName ?? 'Looking up address…';
+      case 'move':
+        return 'Drag the map to the new position';
+      case 'edit':
+        return 'Editing marker';
       default:
-        return undefined;
+        return `${stateNames[marker.state]} · updated ${getFriendlyTime(marker.updatedAt)}`;
     }
   });
-
-  let expanded = $state(false);
 </script>
 
-{#if mode === 'move'}
-  <div class="center-marker">
-    <IcRoundLocationSearching />
-  </div>
-  <div class="move-marker-buttons">
-    <button class="button-primary" onclick={handleSaveMoveClick}>Hierher verschieben</button>
-    <button class="button-accent" onclick={handleCancelMoveClick}>Abbrechen</button>
-  </div>
-{:else}
-  <Details {title} {subtitle} bind:expanded onclose={handleCloseClick}>
-    {#snippet header()}
-      {#if mode === 'view'}
-        {#if canUpdate}
-          <button class="button-primary" onclick={handleEditClick}>Bearbeiten</button>
-          {#if canMove}
-            <button class="button-primary" onclick={handleMoveClick}>Verschieben</button>
-          {/if}
-          {#if canDelete}
-            <button class="button-accent" onclick={handleDeleteClick}>Löschen</button>
-          {/if}
-        {/if}
-      {:else if mode === 'create'}
-        <button class="button-primary" onclick={handleSaveCreateClick}>Hinzufügen</button>
-        {#if !generatedMarkerHouseNumber}
-          <span class="warn">Keine Hausnummer ermittelt</span>
-        {/if}
-      {:else if mode === 'edit'}
-        <button class="button-primary" onclick={handleSaveEditClick} disabled={!hasChanged}>
-          Speichern
-        </button>
-        <button class="button-accent" onclick={handleCancelEditClick}>Abbrechen</button>
-        {#if canDelete}
-          <button class="button-accent" onclick={handleDeleteClick}>Löschen</button>
-        {/if}
-      {/if}
-    {/snippet}
-
-    {#if mode === 'view'}
-      <div><strong>Status:</strong> {stateNames[marker.state]}</div>
-      <div><strong>Name:</strong> {marker.name}</div>
-      <div><strong>Bemerkung:</strong> {marker.description}</div>
-      <div><strong>Erstellt:</strong> {marker.created_at.toLocaleString()}</div>
-      <div><strong>Bearbeitet:</strong> {marker.updated_at.toLocaleString()}</div>
-      <div><strong>Position:</strong> {marker.lat.toFixed(4)}, {marker.lng.toFixed(4)}</div>
-      <div><strong>Id:</strong> {marker.id}</div>
-    {:else if mode === 'create'}
-      <label>
-        Name
-        <input type="text" bind:value={marker.name} placeholder={generatedMarkerName} />
-      </label>
-      <label>
-        Kommentar
-        <textarea bind:value={marker.description}></textarea>
-      </label>
-    {:else}
-      <label>
-        Name
-        <input type="text" bind:value={marker.name} placeholder="Unbenannt" />
-      </label>
-      <div class="radio-input-label">
-        Status
-        <div class="radio-input">
-          {#each markerStates as state}
-            <label>
-              {stateNames[state]}
-              <input type="radio" name="state" value={state} bind:group={marker.state} />
-            </label>
-          {/each}
-        </div>
-      </div>
-      <label>
-        Kommentar
-        <textarea bind:value={marker.description}></textarea>
-      </label>
-    {/if}
-  </Details>
-  {#if mode === 'create'}
-    <div class="center-marker">
-      <IcRoundLocationSearching />
-    </div>
-  {/if}
+{#if mode === 'create' || mode === 'move'}
+  <CenterPin left={mapPadding.left} bottom={mapPadding.bottom} />
 {/if}
 
+<Sheet {title} {subtitle} oninset={handleInset} onclose={mode === 'view' ? onClose : undefined}>
+  {#snippet icon()}
+    {#if mode === 'create'}
+      <LucideMapPinPlus />
+    {:else}
+      <StatusDot size="md" color={stateColors[marker.state]} />
+    {/if}
+  {/snippet}
+
+  {#snippet meta()}
+    {#if (mode === 'edit' || mode === 'view') && hasChanged}
+      <Badge tone="warning">unsaved</Badge>
+    {/if}
+  {/snippet}
+
+  {#if mode === 'view'}
+    {#if canUpdate}
+      <!-- only changes the draft, saving needs a second tap in the footer -->
+      <div class="state">
+        <SegmentedControl label="State" bind:value={marker.state} options={stateOptions} />
+      </div>
+    {/if}
+    {#if marker.description}
+      <p class="description">{marker.description}</p>
+    {/if}
+    <div class="facts-toggle">
+      <Button variant="ghost" size="sm" onclick={() => (showFacts = !showFacts)}>
+        {#if showFacts}<LucideChevronUp />{:else}<LucideChevronDown />{/if}
+        {showFacts ? 'Hide details' : 'Show details'}
+      </Button>
+    </div>
+    {#if showFacts}
+      <div class="facts">
+        <StatTile label="Created">{marker.createdAt.toLocaleString()}</StatTile>
+        <StatTile label="Updated">{marker.updatedAt.toLocaleString()}</StatTile>
+        <StatTile label="Position">{marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}</StatTile>
+        <StatTile label="Id"><span class="id">{marker.id}</span></StatTile>
+      </div>
+    {/if}
+  {:else if mode === 'create'}
+    <p class="hint">Move the map until the pin points at the right spot.</p>
+    {#if generatedMarkerName !== undefined && !generatedMarkerHouseNumber}
+      <Callout tone="warning"><LucideTriangleAlert /> No house number found at this spot</Callout>
+    {/if}
+    <Field label="Name" hint="(optional)">
+      <Input bind:value={marker.name} placeholder={generatedMarkerName ?? 'Address'} />
+    </Field>
+    <Field label="Comment" hint="(optional)">
+      <Textarea bind:value={marker.description} rows={2} />
+    </Field>
+  {:else if mode === 'edit'}
+    <Field label="Name">
+      <Input bind:value={marker.name} placeholder="Untitled" />
+    </Field>
+    <Field label="State" group>
+      <SegmentedControl label="State" bind:value={marker.state} options={stateOptions} />
+    </Field>
+    <Field label="Comment">
+      <Textarea bind:value={marker.description} />
+    </Field>
+  {/if}
+
+  {#snippet footer()}
+    {#if mode === 'view'}
+      {#if hasChanged}
+        <Button variant="primary" block onclick={handleSaveEditClick}>
+          <LucideCheck /> Save as {stateNames[marker.state]}
+        </Button>
+        <Button onclick={handleCancelClick}>Cancel</Button>
+      {:else if canUpdate}
+        <Button variant="primary" block onclick={handleEditClick}>
+          <LucidePencil /> Edit
+        </Button>
+        {#if canMove}
+          <Button block onclick={handleMoveClick}><LucideMove /> Move</Button>
+        {/if}
+        {#if canDelete}
+          <IconButton label="Delete marker" variant="danger" onclick={handleDeleteClick}>
+            <LucideTrash2 />
+          </IconButton>
+        {/if}
+      {:else}
+        <span class="read-only">You can view this marker but not change it.</span>
+      {/if}
+    {:else if mode === 'create'}
+      <Button variant="primary" block onclick={handleSaveCreateClick}>
+        <LucideCheck /> Add marker
+      </Button>
+      <Button onclick={onClose}>Cancel</Button>
+    {:else if mode === 'move'}
+      <Button variant="primary" block onclick={handleSaveMoveClick}>
+        <LucideCheck /> Move here
+      </Button>
+      <Button onclick={handleCancelClick}>Cancel</Button>
+    {:else if mode === 'edit'}
+      <Button variant="primary" block onclick={handleSaveEditClick} disabled={!hasChanged}>
+        <LucideCheck /> Save
+      </Button>
+      <Button onclick={handleCancelClick}>Cancel</Button>
+      {#if canDelete}
+        <IconButton label="Delete marker" variant="danger" onclick={handleDeleteClick}>
+          <LucideTrash2 />
+        </IconButton>
+      {/if}
+    {/if}
+  {/snippet}
+</Sheet>
+
 <style>
-  .center-marker {
-    pointer-events: none;
-    position: absolute;
-    z-index: 10;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: black;
-    font-size: 3rem;
+  p {
+    margin: 0;
   }
 
-  .move-marker-buttons {
-    position: absolute;
-    z-index: 10;
-    bottom: 50%;
-    left: 50%;
-    transform: translate(-50%, 100%) translateY(3rem);
+  /* stretch the segmented control to the full width */
+  .state {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    font-size: 1rem;
   }
 
-  .warn {
-    color: red;
+  .description {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  .hint,
+  .read-only {
+    color: var(--c-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .facts-toggle {
+    margin-left: -0.65rem;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: var(--fs-sm);
+  }
+
+  .id {
+    font-family: var(--ff-mono);
+    font-size: 0.75rem;
   }
 </style>

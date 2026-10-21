@@ -10,11 +10,21 @@ export interface DialogParams<ButtonIds extends string = string> {
   msg: string;
   buttons?: Record<ButtonIds, DialogParamsAction>;
 }
-export interface DialogInstance<ActionKeys extends string = string>
-  extends DialogParams<ActionKeys> {
+export interface DialogInstance<
+  ActionKeys extends string = string,
+> extends DialogParams<ActionKeys> {
   onaction: (action: ActionKeys) => void;
 }
 export type DialogsService = ReturnType<typeof createDialogsService>;
+
+export const discardChangesDialog = {
+  title: 'Unsaved changes',
+  msg: 'Your changes have not been saved yet. Do you want to discard them?',
+  buttons: {
+    cancel: { type: 'primary', label: 'Keep editing' },
+    discard: { type: 'accent', label: 'Discard changes' },
+  },
+} satisfies DialogParams;
 
 export function createDialogsService() {
   let nextId = 0;

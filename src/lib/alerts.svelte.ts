@@ -1,4 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity';
+import { errorMessage } from '#lib/utils.js';
 
 export enum AlertLevel {
   info,
@@ -51,12 +52,12 @@ export function createAlertsService() {
       alertsMap.set(alert.id, alert);
       return alert;
     },
-    error: (partial: Partial<Alert> & { error: Error }) => {
+    error: (partial: Partial<Alert> & { error: unknown }) => {
       const alert: Alert = {
         id: partial.id ?? crypto.randomUUID(),
         title: partial.title ?? 'Error',
         msg: partial.msg,
-        details: partial.error.message,
+        details: errorMessage(partial.error),
         canClose: partial.canClose ?? true,
         level: AlertLevel.error,
       };

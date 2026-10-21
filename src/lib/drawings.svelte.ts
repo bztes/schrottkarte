@@ -1,104 +1,76 @@
-import type { AlertsService } from '$lib/alerts.svelte';
-import type { Database } from '$lib/supabase.types';
-import type { Json } from '$lib/types';
-import { postgresTimestampToDate } from '$lib/utils';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AlertsService } from '#lib/alerts.svelte.js';
+import { deleteDrawings, getDrawings, saveDrawings } from '#lib/remote/drawings.remote.js';
+import type { Json } from '#lib/types.js';
 import { point } from '@turf/turf';
-import type { Geometry } from 'geojson';
+import { browser } from '$app/env';
 
-export interface Drawing {
-  id: string;
-  name: string;
-  description: string;
-  tags: string[];
-  properties: DrawingProperties;
-  geom: Geometry;
-  created_at: Date;
-  updated_at: Date;
-}
+export type Drawing = Omit<DrawingRow, 'properties'> & { properties: DrawingProperties };
 
 export interface DrawingProperties extends Json {
   color?: string;
 }
 
+type DrawingRow = Awaited<ReturnType<typeof getDrawings>>[number];
+
+/** `properties` is stored as any JSON object */
+const toDrawing = (r: DrawingRow) => r as Drawing;
+
 export type DrawingsService = ReturnType<typeof createDrawingsService>;
 
-export function createDrawingsService(supabase: SupabaseClient<Database>, alerts: AlertsService) {
+export function createDrawingsService(alerts: AlertsService) {
   let drawingsMap = $state<Record<string, Drawing>>({});
   const allDrawings = $derived(Object.values(drawingsMap));
 
-  loadDrawings();
+  if (browser) {
+    loadDrawings();
+  }
 
   async function loadDrawings() {
-    const { data, error } = await supabase
-      .from('drawings')
-      .select('id, name, description, properties, geom, tags, created_at, updated_at');
-    if (error) {
+    let rows: DrawingRow[];
+    try {
+      rows = await getDrawings();
+    } catch (error) {
       console.error('Failed to fetch drawings', error);
-      alerts.error({ title: 'Failed to fetch drawings', msg: error.message, error });
+      alerts.error({ title: 'Failed to fetch drawings', error });
       return;
     }
 
     drawingsMap = {};
-    data.forEach((r) => {
-      drawingsMap[r.id] = {
-        id: r.id,
-        description: r.description,
-        name: r.name,
-        tags: r.tags ?? [],
-        properties: r.properties,
-        geom: r.geom as Geometry,
-        created_at: postgresTimestampToDate(r.created_at),
-        updated_at: postgresTimestampToDate(r.updated_at),
-      };
+    rows.forEach((r) => {
+      drawingsMap[r.id] = toDrawing(r);
     });
   }
 
   async function updateOrCreate(drawings: Drawing[]) {
-    const rows: Omit<Drawing, 'created_at' | 'updated_at'>[] = drawings.map((d) => ({
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      geom: d.geom,
-      properties: d.properties,
-      tags: d.tags,
-    }));
-
-    const { error, data } = await supabase.from('drawings').upsert(rows).select();
-
-    if (error) {
+    let saved: DrawingRow[];
+    try {
+      // the command ignores the timestamps, the server sets them
+      saved = await saveDrawings(drawings);
+    } catch (error) {
       console.error('Failed to save drawings', error);
-      alerts.error({ title: 'Failed to save drawings', msg: error.message, error });
+      alerts.error({ title: 'Failed to save drawings', error });
       return false;
     }
 
-    data.forEach((r) => {
-      drawingsMap[r.id] = {
-        id: r.id,
-        description: r.description,
-        name: r.name,
-        tags: r.tags ?? [],
-        properties: r.properties,
-        geom: r.geom as Geometry,
-        created_at: postgresTimestampToDate(r.created_at),
-        updated_at: postgresTimestampToDate(r.updated_at),
-      };
+    saved.forEach((r) => {
+      drawingsMap[r.id] = toDrawing(r);
     });
 
     return true;
   }
 
   async function remove(ids: string[]) {
-    const { error, data } = await supabase.from('drawings').delete().in('id', ids).select('id');
-
-    if (error) {
+    let deletedIds: string[];
+    try {
+      deletedIds = await deleteDrawings(ids);
+    } catch (error) {
       console.error('Failed to delete drawings', error);
-      alerts.error({ title: 'Failed to delete drawings', msg: error.message, error });
+      alerts.error({ title: 'Failed to delete drawings', error });
       return false;
     }
 
-    data.forEach((r) => {
-      delete drawingsMap[r.id];
+    deletedIds.forEach((id) => {
+      delete drawingsMap[id];
     });
 
     return true;
@@ -118,8 +90,8 @@ export function createDrawingsService(supabase: SupabaseClient<Database>, alerts
       tags: [],
       properties: {},
       geom: point([0, 0]).geometry,
-      created_at: dateNow,
-      updated_at: dateNow,
+      createdAt: dateNow,
+      updatedAt: dateNow,
     };
   }
 

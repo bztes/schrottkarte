@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { AlertLevel, type Alert, type AlertsService } from '$lib/alerts.svelte';
-  import type { DialogsService } from '$lib/dialogs.svelte';
-  import IcRoundClose from '~icons/ic/round-close';
+  import { AlertLevel, type Alert, type AlertsService } from '#lib/alerts.svelte.js';
+  import type { DialogsService } from '#lib/dialogs.svelte.js';
+  import Toast from './ui/Toast.svelte';
+  import LucideX from '~icons/lucide/x';
 
   interface Props {
     alertsService: AlertsService;
@@ -37,11 +38,9 @@
   }
 </script>
 
-{#each visible as alert}
-  <button
-    class="badge"
-    class:button-accent={alert.level === AlertLevel.error || alert.level === AlertLevel.warn}
-    class:button-secondary={alert.level === AlertLevel.info}
+{#each visible as alert (alert.id)}
+  <Toast
+    tone={alert.level === AlertLevel.info ? 'info' : 'danger'}
     onclick={() => handleAlertClick(alert)}
   >
     {#if alertsService.all.length > 1}
@@ -49,17 +48,7 @@
     {/if}
     {alert.title}
     {#if alert.canClose}
-      <IcRoundClose />
+      <LucideX />
     {/if}
-  </button>
+  </Toast>
 {/each}
-
-<style>
-  .badge {
-    position: fixed;
-    top: 1rem;
-    left: 50%;
-    z-index: 100;
-    transform: translateX(-50%);
-  }
-</style>

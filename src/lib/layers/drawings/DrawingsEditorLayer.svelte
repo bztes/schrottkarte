@@ -5,19 +5,6 @@
   MapboxDraw.constants.classes.CONTROL_PREFIX = 'maplibregl-ctrl-';
   // @ts-expect-error fix class name for mablibre
   MapboxDraw.constants.classes.CONTROL_GROUP = 'maplibregl-ctrl-group';
-
-  function getDrawingTypeName(drawing: Drawing) {
-    switch (drawing.geom.type) {
-      case 'LineString':
-        return 'Route';
-      case 'Polygon':
-        return 'Bereich';
-      case 'Point':
-        return 'POI';
-      default:
-        return 'Markierung';
-    }
-  }
 </script>
 
 <script lang="ts">
@@ -31,46 +18,25 @@
   import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
   import './mapbox-gl-draw.css';
   import type { Drawing, DrawingsService } from '../../drawings.svelte';
-  import type { TagsService } from '$lib/tags.svelte';
-  import TagsInput from '$lib/components/TagsInput.svelte';
-  import ColorPickerButton from '$lib/components/ColorPickerButton.svelte';
-  import DrawingIcon from '$lib/components/DrawingIcon.svelte';
-  import DrawingSize from '$lib/components/DrawingSize.svelte';
   import deepEqual from 'fast-deep-equal';
-  import DrawingsOutline from './DrawingsOutline.svelte';
-  import IcRoundRoute from '~icons/ic/round-route';
-  import { getLayersService, getMabLibre } from '$lib/components/MapView.svelte';
-  import { applyFilterToArray, type Filter } from '$lib/filter.svelte';
-  import { noop } from '$lib/utils';
+  import { getLayersService, getMabLibre } from '#lib/components/MapView.svelte';
 
   interface Props {
     drawingsService: DrawingsService;
-    tagsService: TagsService;
+    /** drawings shown on the map */
+    drawings: Drawing[];
+    /** id of the selected drawing, the map and the sidebar both change it */
+    selectedId?: string;
+    /** may refuse the change, e.g. when there are unsaved edits */
+    onselect: (id: string | undefined) => boolean | Promise<boolean>;
   }
 
-  let { drawingsService, tagsService }: Props = $props();
+  let { drawingsService, drawings, selectedId, onselect }: Props = $props();
   const map = getMabLibre();
   let draw: MapboxDraw;
-  let filters = $state<Filter[]>([]);
-  const filteredDrawings = $derived(applyFilterToArray(drawingsService.all, ...filters));
-  let selectedDrawing = $state<Drawing>();
-  let selectedDrawingOrg = $state<Drawing>();
-  let isSaving = $state(false);
 
   const layersService = getLayersService();
-  layersService.addLayer({
-    id: 'drawings-edit',
-    activate,
-    deactivate,
-    snippets: {
-      selection: selectionSnippet,
-      outline: {
-        id: 'drawings',
-        icon: IcRoundRoute,
-        snippet: outlineSnippet,
-      },
-    },
-  });
+  layersService.addLayer({ id: 'drawings-edit', activate, deactivate });
 
   function activate() {
     draw = new MapboxDraw({
@@ -82,19 +48,15 @@
       },
       styles: editorDrawingStyles,
       userProperties: true,
-      modes: {
-        ...MapboxDraw.modes,
-        // @ts-expect-error disable internal move function
-        simple_select: { ...MapboxDraw.modes.simple_select, dragMove: noop },
-        // @ts-expect-error disable internal move function
-        direct_select: { ...MapboxDraw.modes.direct_select, dragFeature: noop },
-      },
     });
 
     // @ts-expect-error type problem between mablibre and mapbox
     map.addControl(draw, 'top-left');
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.on('draw.create', handleDrawCreate);
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.on('draw.update', handleDrawUpdate);
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.on('draw.selectionchange', handleSelectionChange);
     map.on('contextmenu', handleRightClick);
   }
@@ -102,8 +64,11 @@
   function deactivate() {
     // @ts-expect-error type problem between mablibre and mapbox
     map.removeControl(draw);
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.off('draw.create', handleDrawCreate);
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.off('draw.update', handleDrawUpdate);
+    // @ts-expect-error mapbox-gl-draw events are not part of maplibre's MapEventType
     map.off('draw.selectionchange', handleSelectionChange);
     map.off('contextmenu', handleRightClick);
   }
@@ -111,7 +76,7 @@
   $effect(() => {
     draw.set({
       type: 'FeatureCollection',
-      features: filteredDrawings.map((d) => ({
+      features: drawings.map((d) => ({
         type: 'Feature',
         id: d.id,
         properties: d.properties,
@@ -120,96 +85,45 @@
     });
   });
 
-  function selectDrawing(id?: string) {
-    if (!id) {
-      selectedDrawing = undefined;
-      selectedDrawingOrg = undefined;
-      return;
+  // reflect a selection made in the sidebar on the map
+  $effect(() => {
+    const current = draw.getSelectedIds();
+    const wanted = selectedId && draw.get(selectedId) ? [selectedId] : [];
+    if (!deepEqual(current, wanted)) {
+      draw.changeMode('simple_select', { featureIds: wanted });
     }
-
-    if (selectedDrawing && selectedDrawing.id === id) {
-      return;
-    }
-
-    selectedDrawing = drawingsService.draft(id);
-    selectedDrawingOrg = drawingsService.draft(id);
-  }
-
-  const isSaved = $derived.by(() => {
-    if (!selectedDrawing) {
-      return true;
-    }
-    if (!selectedDrawingOrg) {
-      return false;
-    }
-    return deepEqual(selectedDrawing, selectedDrawingOrg);
   });
 
   async function handleDrawUpdate(e: DrawUpdateEvent) {
-    const drawing = selectedDrawing;
-    if (!drawing) {
-      return;
+    for (const feature of e.features) {
+      const drawing = drawingsService.draft(feature.id as string);
+      if (deepEqual(drawing.geom, feature.geometry)) {
+        continue;
+      }
+      // the geometry is owned by the map, other fields by the sidebar form
+      drawing.geom = feature.geometry;
+      await drawingsService.updateOrCreate([drawing]);
     }
+  }
 
-    const feature = e.features.find((f) => f.id === drawing.id);
+  async function handleDrawCreate(e: DrawCreateEvent) {
+    const feature = e.features.at(0);
     if (!feature) {
       return;
     }
 
-    if (deepEqual(drawing.geom, feature.geometry)) {
-      return;
-    }
-
+    const drawing = drawingsService.draft(feature.id as string);
     drawing.geom = feature.geometry;
-    saveDrawing(drawing);
-  }
-
-  function handleDrawCreate(e: DrawCreateEvent) {
-    const feature = e.features.at(0);
-    if (!feature) {
-      return;
-    }
-
-    selectDrawing(feature.id as string);
-    if (selectedDrawing) {
-      selectedDrawing.geom = feature.geometry;
-      saveDrawing(selectedDrawing);
+    if (await drawingsService.updateOrCreate([drawing])) {
+      onselect(drawing.id);
     }
   }
 
-  function handleSelectionChange(e: DrawSelectionChangeEvent) {
-    const feature = e.features.at(0);
-    if (feature) {
-      selectDrawing(feature.id as string);
-    } else {
-      selectDrawing();
+  async function handleSelectionChange(e: DrawSelectionChangeEvent) {
+    const id = e.features.at(0)?.id as string | undefined;
+    if (id !== selectedId && !(await onselect(id))) {
+      draw.changeMode('simple_select', { featureIds: selectedId ? [selectedId] : [] });
     }
-  }
-
-  async function saveDrawing(drawing: Drawing) {
-    isSaving = true;
-    const success = await drawingsService.updateOrCreate([drawing]);
-    isSaving = false;
-    if (success && drawing.id === selectedDrawing?.id) {
-      selectedDrawing = drawingsService.draft(drawing.id);
-      selectedDrawingOrg = drawingsService.draft(drawing.id);
-    }
-  }
-
-  function handleSaveClick() {
-    if (selectedDrawing) {
-      saveDrawing(selectedDrawing);
-    }
-  }
-
-  function handleDeleteClick() {
-    if (!selectedDrawing) {
-      return;
-    }
-
-    drawingsService.remove([selectedDrawing.id]);
-    draw.delete(selectedDrawing.id);
-    selectDrawing();
   }
 
   function handleRightClick() {
@@ -220,73 +134,4 @@
 
     draw.trash();
   }
-
-  function tagsProvider(value: string) {
-    return tagsService.values.filter(
-      (t) => t.includes(value) && !selectedDrawing?.tags.includes(t),
-    );
-  }
-
-  function handleReverseClick() {
-    if (!selectedDrawing || selectedDrawing.geom.type !== 'LineString') {
-      return;
-    }
-
-    selectedDrawing.geom.coordinates = [...selectedDrawing.geom.coordinates].reverse();
-  }
 </script>
-
-{#snippet selectionSnippet()}
-  {#if selectedDrawing}
-    <section>
-      <h3>{getDrawingTypeName(selectedDrawing)}</h3>
-      <div>
-        <DrawingIcon drawing={selectedDrawing} />
-        <DrawingSize drawing={selectedDrawing} />
-      </div>
-      <div>
-        Erstellt: {selectedDrawing.created_at.toLocaleString()}
-      </div>
-      <div>
-        Bearbeitet: {selectedDrawing.updated_at.toLocaleString()}
-      </div>
-      <label>
-        Tags
-        <TagsInput bind:tags={selectedDrawing.tags} options={tagsProvider} />
-      </label>
-      <label>
-        Name
-        <input type="text" bind:value={selectedDrawing.name} />
-      </label>
-      <label>
-        Bemerkung
-        <textarea bind:value={selectedDrawing.description}></textarea>
-      </label>
-      <label>
-        Farbe
-        <ColorPickerButton bind:color={selectedDrawing.properties.color} />
-      </label>
-      <button onclick={handleReverseClick}>Reverse</button>
-      <div class="buttons">
-        <button class="button-primary" onclick={handleSaveClick} disabled={isSaved || isSaving}>
-          Speichern
-        </button>
-        <button class="button-accent" onclick={handleDeleteClick} disabled={isSaving}>
-          Löschen
-        </button>
-      </div>
-    </section>
-  {/if}
-{/snippet}
-
-{#snippet outlineSnippet()}
-  <DrawingsOutline {map} {drawingsService} {tagsService} bind:filters />
-{/snippet}
-
-<style>
-  section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-</style>

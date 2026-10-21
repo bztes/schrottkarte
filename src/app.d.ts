@@ -1,20 +1,15 @@
-import type { Database } from '$lib/supabase.types';
-import type { CustomUser } from '$lib/types';
-import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import type { Session } from '#lib/server/auth.js';
+import type { AppUser } from '#lib/types.js';
 import 'unplugin-icons/types/svelte';
 
 declare global {
   namespace App {
     // interface Error {}
     interface Locals {
-      supabase: SupabaseClient<Database>;
-      safeGetSession: () => Promise<{ session: Session | null; user: CustomUser | null }>;
-      session: Session | null;
-      user: CustomUser | null;
+      session: Session['session'] | null;
+      user: AppUser | null;
     }
-    interface PageData {
-      session: Session | null;
-    }
+    // interface PageData {}
     // interface PageState {}
     // interface Platform {}
   }

@@ -1,7 +1,7 @@
-import { browser } from '$app/environment';
-import type { z, ZodSchema } from 'zod';
+import { browser } from '$app/env';
+import { z, type ZodType } from 'zod';
 
-export function createStorage<T extends ZodSchema>(key: string, schema: T) {
+export function createStorage<T extends ZodType>(key: string, schema: T) {
   let value = $state<z.output<typeof schema>>(schema.parse({}));
 
   if (browser) {
@@ -20,6 +20,22 @@ export function createStorage<T extends ZodSchema>(key: string, schema: T) {
 
   return {
     getValue: () => value,
-    setValue: (newValue: z.input<typeof schema>) => (value = newValue),
+    setValue: (newValue: z.input<typeof schema>) => (value = schema.parse(newValue)),
   };
+}
+
+/** The last map position, shared by the map and the editor */
+export function createMapViewStorage() {
+  return createStorage(
+    'map',
+    z.object({
+      center: z
+        .object({
+          lat: z.number().default(52.516246),
+          lng: z.number().default(13.37721),
+        })
+        .prefault({}),
+      zoom: z.number().default(14),
+    }),
+  );
 }

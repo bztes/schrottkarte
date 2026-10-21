@@ -1,12 +1,11 @@
 <script lang="ts">
-  import OsmLayer from '$lib/layers/OsmLayer.svelte';
-  import StreetLightsLayer from '$lib/layers/StreetLightsLayer.svelte';
-  import DrawingsViewLayer from '$lib/layers/drawings/DrawingsViewLayer.svelte';
-  import MapView from '$lib/components/MapView.svelte';
-  import { createLayersService } from '$lib/layers.svelte';
-  import { getDrawingsService } from '../+layout.svelte';
-  import { applyFilterToArray, type Filter } from '$lib/filter.svelte';
-  import type { Drawing } from '$lib/drawings.svelte';
+  import MapLayers from '#lib/layers/MapLayers.svelte';
+  import DrawingsViewLayer from '#lib/layers/drawings/DrawingsViewLayer.svelte';
+  import MapView from '#lib/components/MapView.svelte';
+  import { createLayersService } from '#lib/layers.svelte.js';
+  import { getDrawingsService } from '#lib/components/AppServices.svelte';
+  import { applyFilterToArray, type Filter } from '#lib/filter.svelte.js';
+  import type { Drawing } from '#lib/drawings.svelte.js';
   import { bbox, feature, featureCollection } from '@turf/turf';
   import type { Map as MapLibre } from 'maplibre-gl';
 
@@ -31,8 +30,11 @@
     map = mapLibre;
   }
 
+  // the pages need the base layers to be on the map
+  let layersReady = $state(false);
+
   $effect(() => {
-    if (map) {
+    if (map && layersReady) {
       loadPages(map);
     }
   });
@@ -47,13 +49,13 @@
 
     renderStatus = `Loading Overview`;
     const dataUrl = await generateImageFromFilter(map, drawings, pageData.filters);
-    routes.push({ name: 'Übersicht', dataUrl, selected: true });
+    routes.push({ name: 'Overview', dataUrl, selected: true });
 
     for (let i = 0; i < drawings.length; i++) {
       renderStatus = `Loading ${i + 1} of ${drawings.length}`;
       const drawing = drawings[i];
       const dataUrl = await generateImageFromDrawing(map, drawing);
-      routes.push({ name: drawing.name || 'Unbenannt', dataUrl, selected: true });
+      routes.push({ name: drawing.name || 'Untitled', dataUrl, selected: true });
     }
 
     renderStatus = `${drawings.length + 1} pages ready to print`;
@@ -109,7 +111,7 @@
 
 <div class="pages">
   <label class="noprint">
-    Ortsteil
+    District
     <input type="text" bind:value={title} />
   </label>
   <section class="map">
@@ -117,12 +119,11 @@
       {renderStatus}
     </div>
     <MapView {layersService} onloaded={handleMapLoaded}>
-      <OsmLayer />
-      <StreetLightsLayer />
+      <MapLayers onready={() => (layersReady = true)} />
       <DrawingsViewLayer {drawingsService} {filters} showFiltered={1} />
     </MapView>
   </section>
-  {#each routes as route}
+  {#each routes as route (route.dataUrl)}
     <section class:collapsed={!route.selected}>
       <h2>
         <span>{title}</span>

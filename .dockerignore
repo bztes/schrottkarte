@@ -1,0 +1,11 @@
+node_modules
+build
+.svelte-kit
+.vercel
+.git
+.env
+.env.*
+data
+supabase
+Dockerfile
+docker-compose.yml

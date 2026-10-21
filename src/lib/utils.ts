@@ -25,26 +25,40 @@ export function minutesSince(date: Date) {
   return (Date.now() - date.getTime()) / 1000 / 60;
 }
 
-export function postgresTimestampToDate(timestamp: string) {
-  return new Date(timestamp + 'Z');
+/** Extracts a message from thrown values, including SvelteKit's `HttpError` thrown by remote functions */
+export function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null && 'body' in error) {
+    const body = (error as { body?: { message?: string } }).body;
+    if (body?.message) {
+      return body.message;
+    }
+  }
+  return String(error);
 }
 
 export function getFriendlyTime(date: Date) {
   const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
-    return `vor ${diffInSeconds} Sekunde${diffInSeconds !== 1 ? 'n' : ''}`;
+    return `${diffInSeconds} second${diffInSeconds !== 1 ? 's' : ''} ago`;
   }
   if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60);
-    return `vor ${minutes} Minute${minutes !== 1 ? 'n' : ''}`;
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
   }
   if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600);
-    return `vor ${hours} Stunde${hours !== 1 ? 'n' : ''}`;
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  }
+  if (diffInSeconds < 30 * 86400) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
   }
 
-  return date.toLocaleString();
+  return date.toLocaleDateString();
 }
 
 export function canUpdateLocation(date: Date) {
@@ -91,4 +105,17 @@ export function parserZoom(value: string): number | undefined {
   }
 
   return zoom;
+}
+
+/** Lets the browser save the content as a file */
+export function downloadFile(content: BlobPart, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // revoking right away can cancel the download before the browser started it
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

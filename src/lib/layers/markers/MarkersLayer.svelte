@@ -1,28 +1,28 @@
 <script lang="ts">
   import MarkerSelection, { type MarkerSelectionMode } from './MarkerSelection.svelte';
   import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
-  import IcRoundAddLocation from '~icons/ic/round-add-location';
-  import type { DialogParams, DialogsService } from '$lib/dialogs.svelte';
-  import type { Marker, MarkersService, MarkerState } from '../../markers.svelte';
-  import { getLayersService, getMabLibre } from '$lib/components/MapView.svelte';
+  import LucideMapPinPlus from '~icons/lucide/map-pin-plus';
+  import {
+    discardChangesDialog,
+    type DialogParams,
+    type DialogsService,
+  } from '#lib/dialogs.svelte.js';
+  import { newMarker, type Marker, type MarkersService } from '../../markers.svelte';
+  import { stateColors, unsyncedColor } from '#lib/marker-states.js';
+  import Fab from '#lib/components/ui/Fab.svelte';
+  import { getLayersService, getMabLibre } from '#lib/components/MapView.svelte';
   import { point } from '@turf/turf';
   import type { Feature, Point } from 'geojson';
-  import { canUpdateLocation } from '$lib/utils';
+  import { canUpdateLocation } from '#lib/utils.js';
 
-  const confirmDialogParams = {
-    title: 'Ungespeicherte Änderungen',
-    msg: 'Deine Änderungen wurden noch nicht gespeichert. Möchtest du diese verwerfen?',
+  const deleteDialogParams = {
+    title: 'Delete marker',
+    msg: 'Do you really want to delete this marker? This cannot be undone.',
     buttons: {
-      cancel: { type: 'primary', label: 'Bearbeiten forsetzten' },
-      confirm: { type: 'accent', label: 'Änderung verwerfen' },
+      cancel: { type: 'primary', label: 'Keep marker' },
+      confirm: { type: 'accent', label: 'Delete' },
     },
   } satisfies DialogParams;
-
-  const stateColors: Record<MarkerState, string> = {
-    new: 'red',
-    marked: 'yellow',
-    done: 'green',
-  };
 
   interface Props {
     markersService: MarkersService;
@@ -56,7 +56,6 @@
     id: 'markers',
     activate,
     deactivate,
-    snippets: {},
   });
 
   function activate() {
@@ -138,7 +137,7 @@
         point([marker.lng, marker.lat], {
           id: marker.id,
           color: stateColors[marker.state],
-          borderColor: 'orange',
+          borderColor: unsyncedColor,
         }),
       );
     }
@@ -164,18 +163,7 @@
       return;
     }
 
-    const center = map.getCenter();
-    const date = new Date();
-    selectedMarker = {
-      id: crypto.randomUUID(),
-      name: '',
-      description: '',
-      state: 'new',
-      lat: center.lat,
-      lng: center.lng,
-      created_at: date,
-      updated_at: date,
-    };
+    selectedMarker = newMarker(map.getCenter());
     selectedMarkerMode = 'create';
   }
 
@@ -218,8 +206,8 @@
     }
   }
 
-  function handleMarkerDelete() {
-    if (selectedMarker) {
+  async function handleMarkerDelete() {
+    if (selectedMarker && (await dialogsService.modal(deleteDialogParams)) === 'confirm') {
       markersService.remove(selectedMarker);
       selectMarker(undefined);
     }
@@ -258,7 +246,7 @@
     if (!selectedMarkerHasChanged) {
       return true;
     }
-    return (await dialogsService.modal(confirmDialogParams)) === 'confirm';
+    return (await dialogsService.modal(discardChangesDialog)) === 'discard';
   }
 
   function handleNewClick() {
@@ -274,7 +262,7 @@
     {map}
     {canUpdate}
     {canDelete}
-    canMove={canMove || canUpdateLocation(selectedMarker.created_at)}
+    canMove={canMove || canUpdateLocation(selectedMarker.createdAt)}
     onSave={handleMarkerDetailsSave}
     onDelete={handleMarkerDelete}
     onClose={handleMarkerDetailsClose}
@@ -282,17 +270,25 @@
 {/if}
 
 {#if !selectedMarker && canInsert}
-  <button class="button-primary button-icon button-overlay button-create" onclick={handleNewClick}>
-    <IcRoundAddLocation />
-  </button>
+  <div class="create">
+    <Fab label="Add marker" onclick={handleNewClick}>
+      {#snippet icon()}<LucideMapPinPlus />{/snippet}
+    </Fab>
+  </div>
 {/if}
 
 <style>
-  .button-create {
+  .create {
     position: absolute;
-    bottom: 2rem;
-    right: 2rem;
     z-index: 3;
-    font-size: 3rem;
+    right: 1rem;
+    /* above the attribution control */
+    bottom: 2.75rem;
+  }
+
+  @media (max-width: 720px) {
+    .create {
+      bottom: calc(2.75rem + env(safe-area-inset-bottom));
+    }
   }
 </style>

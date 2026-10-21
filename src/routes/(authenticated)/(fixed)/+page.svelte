@@ -1,28 +1,20 @@
 <script lang="ts">
-  import UserPopup from '$lib/components/UserPopup.svelte';
-  import OsmLayer from '$lib/layers/OsmLayer.svelte';
-  import StreetLightsLayer from '$lib/layers/StreetLightsLayer.svelte';
-  import DrawingsViewLayer from '$lib/layers/drawings/DrawingsViewLayer.svelte';
-  import MapView from '$lib/components/MapView.svelte';
-  import { createLayersService } from '$lib/layers.svelte';
-  import MarkersLayer from '$lib/layers/markers/MarkersLayer.svelte';
-  import { getDialogsService, getDrawingsService, getMarkersService } from '../+layout.svelte';
-  import { z } from 'zod';
-  import { createStorage } from '$lib/storage.svelte';
+  import UserMenu from '#lib/components/UserMenu.svelte';
+  import MapLayers from '#lib/layers/MapLayers.svelte';
+  import DrawingsViewLayer from '#lib/layers/drawings/DrawingsViewLayer.svelte';
+  import MapView from '#lib/components/MapView.svelte';
+  import { createLayersService } from '#lib/layers.svelte.js';
+  import MarkersLayer from '#lib/layers/markers/MarkersLayer.svelte';
+  import {
+    getDialogsService,
+    getDrawingsService,
+    getMarkersService,
+  } from '#lib/components/AppServices.svelte';
+  import { createMapViewStorage } from '#lib/storage.svelte.js';
   import type { Map } from 'maplibre-gl';
+  import { hasRole, markerPermissions } from '#lib/types.js';
 
-  const { getValue: getMapProps, setValue: setMapProps } = createStorage(
-    'map',
-    z.object({
-      center: z
-        .object({
-          lat: z.number().default(52.516246),
-          lng: z.number().default(13.37721),
-        })
-        .default({}),
-      zoom: z.number().default(14),
-    }),
-  );
+  const { getValue: getMapProps, setValue: setMapProps } = createMapViewStorage();
 
   let { data: pageData } = $props();
   const mapProps = getMapProps();
@@ -40,7 +32,7 @@
   }
 </script>
 
-<UserPopup user={pageData.user} />
+<UserMenu user={pageData.user} />
 
 <MapView
   {layersService}
@@ -48,17 +40,14 @@
   zoom={pageData.zoom ?? mapProps.zoom}
   onmoveend={handleMoveEnd}
 >
-  <OsmLayer />
-  <StreetLightsLayer />
+  <MapLayers />
   <DrawingsViewLayer {drawingsService} filters={pageData.filters} />
   <MarkersLayer
     {markersService}
     {dialogsService}
-    canUpdate={pageData.user?.userRole === 'editor' ||
-      pageData.user?.userRole === 'street' ||
-      pageData.user?.userRole === 'spotter'}
-    canDelete={pageData.user?.userRole === 'editor'}
-    canInsert={pageData.user?.userRole === 'editor' || pageData.user?.userRole === 'street'}
-    canMove={pageData.user?.userRole === 'editor'}
+    canUpdate={hasRole(pageData.user, markerPermissions.update)}
+    canDelete={hasRole(pageData.user, markerPermissions.delete)}
+    canInsert={hasRole(pageData.user, markerPermissions.insert)}
+    canMove={hasRole(pageData.user, markerPermissions.move)}
   />
 </MapView>

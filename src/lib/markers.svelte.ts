@@ -1,29 +1,36 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '$lib/supabase.types';
-import { debounce, postgresTimestampToDate } from '$lib/utils';
-import type { Point } from 'geojson';
-import type { AlertsService } from '$lib/alerts.svelte';
+import { debounce } from '#lib/utils.js';
+import type { AlertsService } from '#lib/alerts.svelte.js';
+import {
+  deleteMarker,
+  getMarkers,
+  getMarkersInView,
+  saveMarkers,
+} from '#lib/remote/markers.remote.js';
 import { SvelteMap } from 'svelte/reactivity';
-import type { LngLatBounds } from 'maplibre-gl';
-import { browser } from '$app/environment';
+import { untrack } from 'svelte';
+import type { LngLat, LngLatBounds } from 'maplibre-gl';
+import { browser } from '$app/env';
 
-export interface Marker {
-  id: string;
-  name: string;
-  description: string;
-  state: MarkerState;
-  lng: number;
-  lat: number;
-  created_at: Date;
-  updated_at: Date;
+export type Marker = Awaited<ReturnType<typeof getMarkers>>[number];
+
+/** A marker that is not saved yet, placed at `center` */
+export function newMarker(center: LngLat): Marker {
+  const now = new Date();
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    description: '',
+    state: 'new',
+    lng: center.lng,
+    lat: center.lat,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
-export type MarkerState = Database['public']['Enums']['marker_state_enum'];
-
-export const markerStates: MarkerState[] = ['new', 'marked', 'done'] as const;
 
 export type MarkersService = ReturnType<typeof createMarkersService>;
 
-export function createMarkersService(supabase: SupabaseClient<Database>, alerts: AlertsService) {
+export function createMarkersService(alerts: AlertsService) {
   // ONLINE / OFFLINE
 
   let isOffline = $state(false);
@@ -49,8 +56,8 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
     alerts.warn({
       id: 'offline',
       canClose: false,
-      title: 'Du bist offline',
-      msg: 'Deine Einträge werden auf deinem Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist – dafür muss die App geöffnet sein.',
+      title: 'You are offline',
+      msg: 'Your changes are stored on this device and synced automatically once you are back online, as long as the app stays open.',
     });
   }
 
@@ -68,9 +75,18 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
     const stringData = localStorage.getItem(storageKey);
     unsyncedMarkersMap.clear();
     if (stringData) {
-      const parsedData: Marker[] = JSON.parse(stringData);
+      // markers stored before the switch to camelCase still have `created_at` and `updated_at`
+      const parsedData: (Marker & { created_at?: string; updated_at?: string })[] =
+        JSON.parse(stringData);
       if (Array.isArray(parsedData)) {
-        parsedData.forEach((d) => unsyncedMarkersMap.set(d.id, d));
+        // dates are serialized as strings in JSON
+        parsedData.forEach(({ created_at, updated_at, ...d }) =>
+          unsyncedMarkersMap.set(d.id, {
+            ...d,
+            createdAt: new Date(d.createdAt ?? created_at),
+            updatedAt: new Date(d.updatedAt ?? updated_at),
+          }),
+        );
       }
     }
   }
@@ -86,58 +102,34 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
   const allMarkers = $derived(Array.from(markersMap.values()));
 
   async function loadAll() {
-    const { data, error } = await supabase
-      .from('markers')
-      .select('id, name, description, state, location, created_at, updated_at')
-      .limit(2000);
-
-    if (error) {
+    try {
+      updateMarkersFromRows(await getMarkers());
+    } catch (error) {
       console.error('Failed to fetch markers', error);
-      alerts.error({ title: 'Failed to fetch markers', msg: error.message, error });
-      return;
+      alerts.error({ title: 'Failed to fetch markers', error });
     }
-
-    updateMarkersFromRows(data);
   }
 
   async function loadView(bounds: LngLatBounds) {
     const minBounds = bounds.getSouthWest();
     const maxBounds = bounds.getNorthEast();
 
-    const { data, error } = await supabase.rpc('markers_in_view', {
-      max_lat: minBounds.lat,
-      max_lng: minBounds.lng,
-      min_lat: maxBounds.lat,
-      min_lng: maxBounds.lng,
-      limit_rows: 100,
-    });
-
-    if (error) {
+    try {
+      const rows = await getMarkersInView({
+        minLng: minBounds.lng,
+        minLat: minBounds.lat,
+        maxLng: maxBounds.lng,
+        maxLat: maxBounds.lat,
+        limit: 100,
+      });
+      updateMarkersFromRows(rows);
+    } catch (error) {
       console.error('Failed to fetch markers', error);
-      return;
     }
-
-    updateMarkersFromRows(data);
   }
 
-  function updateMarkersFromRows(
-    rows:
-      | Database['public']['Tables']['markers']['Row'][]
-      | Database['public']['Functions']['markers_in_view']['Returns'],
-  ) {
-    rows.forEach((r) => {
-      const location = r.location as Point;
-      markersMap.set(r.id, {
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        state: r.state,
-        lng: location.coordinates[0],
-        lat: location.coordinates[1],
-        created_at: postgresTimestampToDate(r.created_at),
-        updated_at: postgresTimestampToDate(r.updated_at),
-      });
-    });
+  function updateMarkersFromRows(rows: Marker[]) {
+    rows.forEach((r) => markersMap.set(r.id, r));
   }
 
   // BACKEND SAVE
@@ -146,7 +138,8 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
 
   $effect(() => {
     if (unsyncedMarkersMap.size > 0 && syncMarkersTimeoutId === undefined && !isOffline) {
-      save();
+      // the remote command updates reactive state (pending count), don't let the effect depend on it
+      untrack(save);
     }
   });
 
@@ -157,31 +150,24 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
       alerts.info({
         id: 'marker-save',
         canClose: false,
-        title: 'Speichern läuft...',
-        msg: 'Deine Einträge werden gleich gespeichert. Bitte habe noch einen Moment Geduld. 😊',
+        title: 'Saving…',
+        msg: 'Your changes will be saved in a moment. 😊',
       });
     }
   });
 
   async function save() {
-    const markersToUpdate = Array.from(unsyncedMarkersMap.values());
-    const rows = markersToUpdate.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      state: p.state,
-      location: `POINT(${p.lng} ${p.lat})`,
-    }));
-
-    const { error, data } = await supabase.from('markers').upsert(rows).select();
-
-    if (error) {
+    let data: Marker[];
+    try {
+      // the command ignores the timestamps, the server sets them
+      data = await saveMarkers(Array.from(unsyncedMarkersMap.values()));
+    } catch (error) {
       console.error(error);
       alerts.error({
         id: 'marker-save-error',
         canClose: false,
-        title: 'Speicherproblem',
-        msg: 'Beim Speichern ist etwas schiefgelaufen, aber keine Panik! Wir versuchen es gleich erneut. 😊',
+        title: 'Saving failed',
+        msg: 'Something went wrong while saving, but don’t worry, we will retry shortly. 😊',
         error,
       });
       syncMarkersTimeoutId = setTimeout(save, 15 * 1000);
@@ -192,19 +178,8 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
     syncMarkersTimeoutId = undefined;
 
     data.forEach((r) => {
-      const location = r.location as Point;
-      const marker: Marker = {
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        state: r.state,
-        lng: location.coordinates[0],
-        lat: location.coordinates[1],
-        created_at: postgresTimestampToDate(r.created_at),
-        updated_at: postgresTimestampToDate(r.updated_at),
-      };
-      unsyncedMarkersMap.delete(marker.id);
-      markersMap.set(marker.id, marker);
+      unsyncedMarkersMap.delete(r.id);
+      markersMap.set(r.id, r);
     });
   }
 
@@ -227,8 +202,10 @@ export function createMarkersService(supabase: SupabaseClient<Database>, alerts:
   }
 
   async function remove(marker: Marker) {
-    const { error } = await supabase.from('markers').delete().eq('id', marker.id);
-    if (error) {
+    try {
+      await deleteMarker(marker.id);
+    } catch (error) {
+      console.error('Failed to delete marker', error);
       return;
     }
 

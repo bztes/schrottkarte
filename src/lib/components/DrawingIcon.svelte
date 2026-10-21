@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { Drawing } from '../drawings.svelte';
-  import IcRoundDirectionsWalk from '~icons/ic/round-directions-walk';
-  import IcRoundAdjust from '~icons/ic/round-adjust';
-  import IcRoundBorderAll from '~icons/ic/round-border-all';
-  import IcRoundQuestionMark from '~icons/ic/round-question-mark';
+  import LucideFootprints from '~icons/lucide/footprints';
+  import LucideCircleDot from '~icons/lucide/circle-dot';
+  import LucidePentagon from '~icons/lucide/pentagon';
+  import LucideCircleHelp from '~icons/lucide/circle-help';
 
   interface Props {
     drawing: Drawing;
@@ -13,11 +13,11 @@
 </script>
 
 {#if drawing.geom.type === 'LineString'}
-  <IcRoundDirectionsWalk />
+  <LucideFootprints />
 {:else if drawing.geom.type === 'Point'}
-  <IcRoundAdjust />
+  <LucideCircleDot />
 {:else if drawing.geom.type === 'Polygon'}
-  <IcRoundBorderAll />
+  <LucidePentagon />
 {:else}
-  <IcRoundQuestionMark />
+  <LucideCircleHelp />
 {/if}

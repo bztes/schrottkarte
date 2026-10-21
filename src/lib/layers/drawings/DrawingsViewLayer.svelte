@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { getLayersService, getMabLibre } from '$lib/components/MapView.svelte';
-  import type { GeoJSONSource } from 'maplibre-gl';
+  import { getLayersService, getMabLibre } from '#lib/components/MapView.svelte';
+  import type { FilterSpecification, GeoJSONSource, SymbolLayerSpecification } from 'maplibre-gl';
   import { circleColor, hiddenColor, lineColor, polygonColor } from './drawings-style';
-  import type { DrawingsService } from '$lib/drawings.svelte';
-  import { filtersMatch, type Filter } from '$lib/filter.svelte';
+  import type { DrawingsService } from '#lib/drawings.svelte.js';
+  import { filtersMatch, type Filter } from '#lib/filter.svelte.js';
+  import routeArrowIcon from '#lib/assets/map-icons/route-arrow.png';
+  import routeStartIcon from '#lib/assets/map-icons/route-start.png';
 
   interface Props {
     drawingsService: DrawingsService;
@@ -17,7 +19,7 @@
   let mapSource = $state<GeoJSONSource>();
 
   const layersService = getLayersService();
-  layersService.addLayer({ id: 'drawings-view', activate, deactivate, snippets: {} });
+  layersService.addLayer({ id: 'drawings-view', activate, deactivate });
 
   async function activate() {
     map.addSource('drawings', {
@@ -79,25 +81,50 @@
     });
 
     try {
-      const imageResponse = await map.loadImage('/route-start-symbol.png');
-      map.addImage('start-image', imageResponse.data);
+      const [arrowImage, startImage] = await Promise.all([
+        map.loadImage(routeArrowIcon),
+        map.loadImage(routeStartIcon),
+      ]);
+      // SDF icons, tinted with the route color and outlined with the halo
+      map.addImage('arrow-image', arrowImage.data, { sdf: true });
+      map.addImage('start-image', startImage.data, { sdf: true });
+      const routeFilter: FilterSpecification = [
+        'all',
+        ['==', ['geometry-type'], 'LineString'],
+        ['==', ['get', 'hidden'], false],
+        ['>', ['zoom'], 12],
+      ];
+      const routeIconPaint = {
+        'icon-color': ['case', ['has', 'color'], ['get', 'color'], lineColor],
+        'icon-halo-color': '#ffffff',
+        'icon-halo-width': 1.5,
+      } satisfies SymbolLayerSpecification['paint'];
+      map.addLayer({
+        id: 'line-arrow-symbol',
+        type: 'symbol',
+        source: 'drawings',
+        filter: routeFilter,
+        layout: {
+          'icon-image': 'arrow-image',
+          'icon-allow-overlap': true,
+          'symbol-placement': 'line',
+          'symbol-spacing': 80,
+        },
+        paint: routeIconPaint,
+      });
       map.addLayer({
         id: 'line-start-symbol',
         type: 'symbol',
         source: 'drawings',
-        filter: [
-          'all',
-          ['==', ['geometry-type'], 'LineString'],
-          ['==', ['get', 'hidden'], false],
-          ['>', ['zoom'], 12],
-        ],
+        filter: routeFilter,
         layout: {
           'icon-image': 'start-image',
-          'icon-size': 0.5,
+          'icon-size': 1.4,
           'icon-allow-overlap': true,
           'symbol-placement': 'point',
           'symbol-z-order': 'source',
         },
+        paint: routeIconPaint,
       });
     } catch (e) {
       console.error(e);
@@ -108,6 +135,10 @@
 
   function deactivate() {
     mapSource = undefined;
+    map.removeLayer('line-start-symbol');
+    map.removeLayer('line-arrow-symbol');
+    map.removeImage('start-image');
+    map.removeImage('arrow-image');
     map.removeLayer('points');
     map.removeLayer('lines');
     map.removeSource('drawings');

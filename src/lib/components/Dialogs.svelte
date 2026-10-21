@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { DialogsService } from '$lib/dialogs.svelte';
-  import Dialog from './Dialog.svelte';
+  import type { DialogParamsAction, DialogsService } from '#lib/dialogs.svelte.js';
+  import Modal from './ui/Modal.svelte';
+  import Button from './ui/Button.svelte';
 
   interface Props {
     dialogsService: DialogsService;
@@ -10,62 +11,42 @@
 
   let firstDialog = $derived(dialogsService.all.at(0));
 
-  function handleActionClick(actionId: string) {
-    if (firstDialog) {
-      firstDialog.onaction(actionId);
-    }
-  }
-
-  function handleCloseClick() {
-    if (firstDialog) {
-      firstDialog.onaction('close');
-    }
-  }
+  const variants = {
+    none: 'ghost',
+    primary: 'primary',
+    secondary: 'secondary',
+    accent: 'danger',
+  } as const satisfies Record<DialogParamsAction['type'], string>;
 </script>
 
 {#if firstDialog}
-  <div class="overlay">
-    <Dialog
+  {#key firstDialog}
+    <Modal
       title={firstDialog.title}
-      buttons={firstDialog.buttons ? buttons : undefined}
-      onclose={handleCloseClick}
+      footer={firstDialog.buttons ? buttons : undefined}
+      onclose={() => firstDialog.onaction('close')}
     >
-      {#each firstDialog.msg.split('\n') as msg}
+      {#each firstDialog.msg.split('\n') as msg, i (i)}
         <p>{msg}</p>
       {/each}
-    </Dialog>
-  </div>
+    </Modal>
+  {/key}
 
   {#snippet buttons()}
-    {#if firstDialog.buttons}
-      {#each Object.entries(firstDialog.buttons) as [id, button] (id)}
-        <button
-          class:button-primary={button.type === 'primary'}
-          class:button-secondary={button.type === 'secondary'}
-          class:button-accent={button.type === 'accent'}
-          onclick={() => handleActionClick(id)}
-        >
-          {button.label}
-        </button>
-      {/each}
-    {/if}
+    {#each Object.entries(firstDialog.buttons ?? {}) as [id, button] (id)}
+      <Button variant={variants[button.type]} onclick={() => firstDialog.onaction(id)}>
+        {button.label}
+      </Button>
+    {/each}
   {/snippet}
 {/if}
 
 <style>
-  .overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 100vw;
-    background-color: #55555555;
-    z-index: 1000;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    box-sizing: border-box;
+  p {
+    margin: 0 0 0.5rem;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
   }
 </style>

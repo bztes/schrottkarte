@@ -1,102 +1,80 @@
-import { createServerClient } from '@supabase/ssr';
-import { type Handle, redirect } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import type { Database } from '$lib/supabase.types';
-import { jwtDecode } from 'jwt-decode';
-import type { CustomJwtPayload, CustomUser } from '$lib/types';
+import { redirect } from '@sveltejs/kit';
+import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
+import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { building } from '$app/env';
+import { auth } from '#lib/server/auth.js';
+import { runMigrations } from '#lib/server/db/index.js';
+import { isSetupMode } from '#lib/server/guard.js';
+import { adminRoutes, hasRole, type UserRole } from '#lib/types.js';
 
-const supabase: Handle = async ({ event, resolve }) => {
-  /**
-   * Creates a Supabase client specific to this server request.
-   *
-   * The Supabase client gets the Auth token from the request cookies.
-   */
-  event.locals.supabase = createServerClient<Database>(
-    PUBLIC_SUPABASE_URL,
-    PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll: () => event.cookies.getAll(),
-        /**
-         * SvelteKit's cookies API requires `path` to be explicitly set in
-         * the cookie options. Setting `path` to `/` replicates previous/
-         * standard behavior.
-         */
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            event.cookies.set(name, value, { ...options, path: '/' });
-          });
-        },
-      },
-    },
-  );
+export const init: ServerInit = () => {
+  runMigrations();
+};
 
-  /**
-   * Unlike `supabase.auth.getSession()`, which returns the session _without_
-   * validating the JWT, this function also calls `getUser()` to validate the
-   * JWT before returning the session.
-   */
-  event.locals.safeGetSession = async () => {
-    const {
-      data: { session },
-    } = await event.locals.supabase.auth.getSession();
-    if (!session) {
-      return { session: null, user: null };
-    }
+const betterAuth: Handle = async ({ event, resolve }) => {
+  if (!building) {
+    const result = await auth.api.getSession({ headers: event.request.headers });
+    event.locals.session = result?.session ?? null;
+    event.locals.user = result
+      ? {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role as UserRole,
+        }
+      : null;
+  }
 
-    const {
-      data: { user },
-      error,
-    } = await event.locals.supabase.auth.getUser();
-    if (error || !user) {
-      // JWT validation has failed
-      return { session: null, user: null };
-    }
-
-    const userRole = jwtDecode<CustomJwtPayload>(session.access_token).user_role;
-    const customUser: CustomUser = Object.assign(user, { userRole });
-
-    return { session, user: customUser };
-  };
-
-  return resolve(event, {
-    filterSerializedResponseHeaders(name) {
-      /**
-       * Supabase libraries use the `content-range` and `x-supabase-api-version`
-       * headers, so we need to tell SvelteKit to pass it through.
-       */
-      return name === 'content-range' || name === 'x-supabase-api-version';
-    },
-  });
+  return svelteKitHandler({ event, resolve, auth, building });
 };
 
 const authGuard: Handle = async ({ event, resolve }) => {
-  const { session, user } = await event.locals.safeGetSession();
-  event.locals.session = session;
-  event.locals.user = user;
+  // Remote functions are guarded individually, since `signin` must be reachable without a session.
+  // The healthcheck is public.
+  if (event.isRemoteRequest || event.url.pathname === '/health') {
+    return resolve(event);
+  }
 
+  const { user } = event.locals;
   const url = event.url;
 
-  if (!session && url.pathname !== '/auth') {
+  // the map editor used to live here
+  if (url.pathname === '/editor') {
+    redirect(308, '/admin/editor');
+  }
+
+  // see `adminRoutes`, unknown admin pages are for admins only
+  if (url.pathname.startsWith('/admin')) {
+    const route = adminRoutes.find((r) => r.href === url.pathname) ?? {
+      role: 'admin',
+      setup: false,
+    };
+    if (user ? hasRole(user, route.role) : route.setup && isSetupMode()) {
+      return resolve(event);
+    }
+    if (hasRole(user, 'editor')) {
+      redirect(303, '/admin/editor');
+    }
+    if (user) {
+      redirect(303, '/');
+    }
+  }
+
+  if (!user && url.pathname !== '/auth') {
     const fullPath = url.pathname + url.search;
     if (fullPath === '/' || fullPath === '') {
-      redirect(303, `/auth`);
+      redirect(303, isSetupMode() ? '/admin' : '/auth');
     } else {
       const encodedRedirect = encodeURIComponent(fullPath);
       redirect(303, `/auth?redirect=${encodedRedirect}`);
     }
   }
 
-  if (session && url.pathname === '/auth') {
-    redirect(303, '/');
-  }
-
-  if (user?.userRole !== 'editor' && url.pathname === '/editor') {
+  if (user && url.pathname === '/auth') {
     redirect(303, '/');
   }
 
   return resolve(event);
 };
 
-export const handle: Handle = sequence(supabase, authGuard);
+export const handle: Handle = sequence(betterAuth, authGuard);

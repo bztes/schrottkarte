@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { createContext } from '$lib/utils';
+  import { createContext } from '#lib/utils.js';
 
   export const { get: getMabLibre, set: setMapLibre } = createContext<MapLibre>('map');
   export const { get: getLayersService, set: setLayersService } =
@@ -13,10 +13,13 @@
     GeolocateControl,
     Map as MapLibre,
     NavigationControl,
+    setWorkerUrl,
     type LngLatLike,
   } from 'maplibre-gl';
+  // maplibre resolves its worker relative to its own bundle, which breaks when Vite bundles it
+  import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
   import { onMount, type Snippet } from 'svelte';
-  import type { LayersService } from '$lib/layers.svelte';
+  import type { LayersService } from '#lib/layers.svelte.js';
 
   interface Props {
     layersService: LayersService;
@@ -30,6 +33,7 @@
   let { layersService, center, zoom, children, onloaded, onmoveend }: Props = $props();
   let mapContainer = $state<HTMLElement>();
   let map = $state<MapLibre>();
+  // svelte-ignore state_referenced_locally
   setLayersService(layersService);
 
   let initialized = $state(false);
@@ -40,6 +44,7 @@
       return;
     }
 
+    setWorkerUrl(workerUrl);
     map = new MapLibre({
       container: mapContainer,
       style: {
@@ -70,7 +75,7 @@
     geoControl.on('error', () => (locating = false));
     map.addControl(geoControl, 'top-left');
 
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
 
     map.on('load', () => {
       initialized = true;

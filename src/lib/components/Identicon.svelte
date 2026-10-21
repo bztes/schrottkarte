@@ -28,8 +28,8 @@
   fill={`hsl(${hue} ${saturation}% ${lightness}%)`}
   width="1em"
 >
-  {#each { length: 25 } as _, i}
-    {#if hash & (1 << i % 15)}
+  {#each { length: 25 } as _, i (i)}
+    {#if hash & (1 << (i % 15))}
       <rect x={i > 14 ? 7 - ~~(i / 5) : ~~(i / 5)} y={i % 5} width="1" height="1" />
     {/if}
   {/each}
