@@ -40,7 +40,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 
   // the map editor used to live here
   if (url.pathname === '/editor') {
-    redirect(308, '/admin/editor');
+    redirect(308, '/admin');
   }
 
   // see `adminRoutes`, unknown admin pages are for admins only
@@ -53,7 +53,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
       return resolve(event);
     }
     if (hasRole(user, 'editor')) {
-      redirect(303, '/admin/editor');
+      redirect(303, '/admin');
     }
     if (user) {
       redirect(303, '/');
@@ -63,7 +63,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
   if (!user && url.pathname !== '/auth') {
     const fullPath = url.pathname + url.search;
     if (fullPath === '/' || fullPath === '') {
-      redirect(303, isSetupMode() ? '/admin' : '/auth');
+      redirect(303, isSetupMode() ? '/admin/users' : '/auth');
     } else {
       const encodedRedirect = encodeURIComponent(fullPath);
       redirect(303, `/auth?redirect=${encodedRedirect}`);

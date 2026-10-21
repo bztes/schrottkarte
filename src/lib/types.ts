@@ -42,10 +42,10 @@ export const markerPermissions = {
  * `setup` pages are also open without a session as long as no user exists.
  */
 export const adminRoutes = [
-  { href: '/admin/editor', role: 'editor', setup: false },
+  { href: '/admin', role: 'editor', setup: false },
   { href: '/admin/export', role: 'editor', setup: false },
   { href: '/admin/layers', role: 'admin', setup: false },
-  { href: '/admin', role: 'admin', setup: true },
+  { href: '/admin/users', role: 'admin', setup: true },
   { href: '/admin/migrate', role: 'admin', setup: true },
 ] as const satisfies { href: string; role: UserRole; setup: boolean }[];
 

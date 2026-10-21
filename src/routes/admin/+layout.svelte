@@ -14,10 +14,10 @@
   let { children, data } = $props();
 
   const tabInfo = {
-    '/admin/editor': { label: 'Editor', icon: LucidePenTool },
+    '/admin': { label: 'Editor', icon: LucidePenTool },
     '/admin/export': { label: 'Export', icon: LucideDownload },
     '/admin/layers': { label: 'Map layers', icon: LucideLayers },
-    '/admin': { label: 'Users', icon: LucideUsers },
+    '/admin/users': { label: 'Users', icon: LucideUsers },
     '/admin/migrate': { label: 'Supabase import', icon: LucideCloudUpload },
   } satisfies Record<(typeof adminRoutes)[number]['href'], unknown>;
 
@@ -29,7 +29,7 @@
   );
 
   // the editor is a full-size map, all other pages are regular content
-  const fill = $derived(page.url.pathname === '/admin/editor');
+  const fill = $derived(page.url.pathname === '/admin');
 </script>
 
 <div class="shell" class:fill>

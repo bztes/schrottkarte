@@ -75,7 +75,7 @@
               {#snippet icon()}<LucideMap />{/snippet}
             </MenuItem>
           {:else if hasRole(user, 'editor')}
-            <MenuItem href="/admin/editor" label="Admin" onclick={() => (open = false)}>
+            <MenuItem href="/admin" label="Admin" onclick={() => (open = false)}>
               {#snippet icon()}<LucideLayoutDashboard />{/snippet}
             </MenuItem>
           {/if}
