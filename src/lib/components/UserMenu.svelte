@@ -66,6 +66,15 @@
         </header>
 
         <nav>
+          {#if context === 'admin'}
+            <MenuItem href="/" label="Map" onclick={() => (open = false)}>
+              {#snippet icon()}<LucideMap />{/snippet}
+            </MenuItem>
+          {:else if hasRole(user, 'editor')}
+            <MenuItem href="/admin" label="Admin" onclick={() => (open = false)}>
+              {#snippet icon()}<LucideLayoutDashboard />{/snippet}
+            </MenuItem>
+          {/if}
           <MenuItem
             label="Legend"
             onclick={() => {
@@ -75,15 +84,7 @@
           >
             {#snippet icon()}<LucideInfo />{/snippet}
           </MenuItem>
-          {#if context === 'admin'}
-            <MenuItem href="/" label="Back to map" onclick={() => (open = false)}>
-              {#snippet icon()}<LucideMap />{/snippet}
-            </MenuItem>
-          {:else if hasRole(user, 'editor')}
-            <MenuItem href="/admin" label="Admin" onclick={() => (open = false)}>
-              {#snippet icon()}<LucideLayoutDashboard />{/snippet}
-            </MenuItem>
-          {/if}
+          <hr />
           <form {...signout}>
             <MenuItem type="submit" label="Sign out" tone="danger">
               {#snippet icon()}<LucideLogOut />{/snippet}
@@ -201,6 +202,12 @@
 
   nav form {
     display: contents;
+  }
+
+  hr {
+    margin: 0.4rem -0.4rem;
+    border: none;
+    border-top: 1px solid var(--c-border);
   }
 
   /* mobile: bottom sheet over a dimmed map */
