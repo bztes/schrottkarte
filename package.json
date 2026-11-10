@@ -1,6 +1,7 @@
 {
   "name": "schrottkarte",
   "version": "0.0.1",
+  "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -19,6 +20,8 @@
     "start": "node build"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "@iconify/json": "^2.2.545",
     "@sveltejs/adapter-node": "^6.0.0",
@@ -56,6 +59,7 @@
     "postgres": "^3.4.9",
     "zod": "^4.6.7"
   },
+  "packageManager": "pnpm@12.17.0",
   "imports": {
     "#lib": "./src/lib/index.js",
     "#lib/*": "./src/lib/*"

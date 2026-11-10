@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  changesets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      version: ${{ steps.changesets.outputs.published == 'true' && fromJSON(steps.changesets.outputs.published-packages)[0].version || '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Opens/updates the "chore: release" PR; once that is merged, tags vX.Y.Z and creates a GitHub release.
+      - id: changesets
+        uses: changesets/action@v2
+        with:
+          version-script: pnpm changeset version
+          publish-script: pnpm changeset tag
+          commit-message: 'chore: release'
+          pr-title: 'chore: release'
+
+  docker:
+    needs: changesets
+    # Only when changesets just tagged a release.
+    if: needs.changesets.outputs.version != ''
+    # Holds DOCKERHUB_USERNAME (variable) and DOCKERHUB_TOKEN (secret).
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # Emulates arm64 so the amd64 runner can build the arm64 variant.
+      - uses: docker/setup-qemu-action@v4
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # v1.2.3 -> 1.2.3 + 1.2 + latest, plus a sha-<short> tag.
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/schrottkarte
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}},value=${{ needs.changesets.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.changesets.outputs.version }}
+            type=sha
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
