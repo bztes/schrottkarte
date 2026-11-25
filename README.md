@@ -2,7 +2,7 @@
 
 A shared map for collecting scrap spots. Team members place markers, track them from new to marked to done, and plan areas and routes on top of the map.
 
-Copy `.env.example` to `.env`, set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) and, for production, `ORIGIN` to the public URL. Then run:
+Copy [compose.yaml](compose.yaml) and [.env.example](.env.example) (as `.env`) to the server, set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`) and, for production, `ORIGIN` to the public URL. Then run:
 
 ```bash
 # production

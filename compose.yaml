@@ -1,11 +1,14 @@
+# Settings go into a .env file next to this file, see .env.example.
+
 services:
-  app:
+  schrottkarte:
     image: ghcr.io/bztes/schrottkarte:latest
-    ports: ['3000:3000']
-    environment:
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?generate one with `openssl rand -base64 32`}
-      ORIGIN: ${ORIGIN:?set the public origin for authentication, e.g. https://schrottkarte.example.com}
-      BODY_SIZE_LIMIT: 10M
-    volumes:
-      - ./data:/data
     restart: unless-stopped
+    environment:
+      - ORIGIN=${ORIGIN:?set the public URL, e.g. https://schrottkarte.example.com}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?generate one with `openssl rand -base64 32`}
+    ports:
+      - '3000:3000'
+    volumes:
+      # Persistent Schrottkarte state: the SQLite database (schrottkarte.db)
+      - ${DATA_DIR:-./data}:/data

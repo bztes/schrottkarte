@@ -2,13 +2,8 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 
 export const variables = defineEnvVars({
   DATA_DIR: {
-    description: 'Directory for persistent data such as the SQLite database',
-    schema: (value) => {
-      if (!value) {
-        throw new Error('must be set, e.g. ./data');
-      }
-      return value;
-    },
+    description: 'Directory for the SQLite database (schrottkarte.db). Default `./data`.',
+    schema: (value) => value?.trim() || './data',
   },
   BETTER_AUTH_SECRET: {
     description: 'Secret used to sign sessions, generate one with `openssl rand -base64 32`',

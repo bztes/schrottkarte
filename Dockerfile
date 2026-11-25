@@ -16,7 +16,7 @@ COPY . .
 # Only for testing over plain http, e.g. `--build-arg BUILD_ORIGIN=http://localhost:3000`.
 ARG BUILD_ORIGIN
 # Env vars are validated while the build analyses the app; the real secret is only needed at runtime.
-RUN BETTER_AUTH_SECRET=build-placeholder-build-placeholder DATA_DIR=/data pnpm build
+RUN BETTER_AUTH_SECRET=build-placeholder-build-placeholder pnpm build
 
 # Dependencies for the target platform: native packages (better-sqlite3) ship per-platform binaries.
 FROM ${NODE_IMAGE} AS deps
@@ -37,7 +37,9 @@ COPY --from=build /app/drizzle ./drizzle
 ENV NODE_ENV=production \
 	HOST=0.0.0.0 \
 	PORT=3000 \
+	BODY_SIZE_LIMIT=10M \
 	DATA_DIR=/data
+VOLUME /data
 EXPOSE 3000
 # Polls /health (src/routes/health/+server.ts); node, as the slim image has neither curl nor wget.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
