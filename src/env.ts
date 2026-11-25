@@ -1,7 +1,7 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
 
 export const variables = defineEnvVars({
-  DATA_PATH: {
+  DATA_DIR: {
     description: 'Directory for persistent data such as the SQLite database',
     schema: (value) => {
       if (!value) {

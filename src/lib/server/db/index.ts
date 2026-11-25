@@ -2,15 +2,15 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { mkdirSync } from 'node:fs';
-import { DATA_PATH } from '$app/env/private';
+import { DATA_DIR } from '$app/env/private';
 import { building } from '$app/env';
 import { databasePath } from './path.js';
 import * as schema from './schema.js';
 
 // the build step imports this module to analyse the app, don't touch the real database then
-const path = building ? ':memory:' : databasePath(DATA_PATH);
+const path = building ? ':memory:' : databasePath(DATA_DIR);
 if (!building) {
-  mkdirSync(DATA_PATH, { recursive: true });
+  mkdirSync(DATA_DIR, { recursive: true });
 }
 
 const sqlite = new Database(path);

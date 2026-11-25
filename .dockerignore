@@ -8,4 +8,4 @@ build
 data
 supabase
 Dockerfile
-docker-compose.yml
+compose.yaml

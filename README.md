@@ -6,16 +6,16 @@ Copy `.env.example` to `.env`, set `BETTER_AUTH_SECRET` (`openssl rand -base64 3
 
 ```bash
 # production
-docker compose up -d --build
+docker compose up -d
 
 # development
 pnpm install
 pnpm dev
 ```
 
-In production the app is expected behind an HTTPS reverse proxy. To test the Docker image locally over plain HTTP, set `ORIGIN=http://localhost:3000` and build with the same origin, otherwise form submissions are rejected with 403:
+In production the app is expected behind an HTTPS reverse proxy. To test the Docker image locally over plain HTTP, set `ORIGIN=http://localhost:3000` and build the image locally with the same origin, otherwise form submissions are rejected with 403:
 
 ```bash
-docker compose build --build-arg BUILD_ORIGIN=http://localhost:3000
+docker build --build-arg BUILD_ORIGIN=http://localhost:3000 -t ghcr.io/bztes/schrottkarte:latest .
 docker compose up -d
 ```
